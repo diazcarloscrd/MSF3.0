@@ -1,40 +1,39 @@
 import React, { useState } from 'react';
 import { AuthProvider } from './context/AuthContext';
-import { WorkDayProvider, useWorkDay } from './context/WorkDayContext';
+import { WorkDayProvider } from './context/WorkDayContext';
 import { Header } from './components/Header';
+import { DayTopControls } from './components/DayTopControls';
 import { PartnerRegistrationForm } from './components/PartnerRegistrationForm';
-import { MyHoursCard } from './components/MyHoursCard';
-import { CollectorsCountAdmin } from './components/CollectorsCountAdmin';
 import { StatsDashboard } from './components/StatsDashboard';
 import { IndividualPerformance } from './components/IndividualPerformance';
-import { PartnersList } from './components/PartnersList';
+import { PartnersListWithCalendar } from './components/PartnersListWithCalendar';
 import { DayClosureSection } from './components/DayClosureSection';
-import { HistorySection } from './components/HistorySection';
-import { LayoutDashboard, UserPlus, ListOrdered, FileSpreadsheet, History as HistoryIcon } from 'lucide-react';
+import { WeeklyClosingSection } from './components/WeeklyClosingSection';
+import {
+  LayoutDashboard,
+  UserPlus,
+  ListOrdered,
+  FileSpreadsheet,
+  CalendarCheck,
+} from 'lucide-react';
 
 const MainAppContent: React.FC = () => {
-  const { isViewingHistory } = useWorkDay();
-  const [activeTab, setActiveTab] = useState<'CARGA' | 'DASHBOARD' | 'SOCIOS' | 'CIERRE' | 'HISTORIAL'>('CARGA');
+  const [activeTab, setActiveTab] = useState<'CARGA' | 'DASHBOARD' | 'SOCIOS' | 'CIERRE' | 'SEMANAL'>('CARGA');
 
   return (
-    <div className="min-h-screen bg-[#F7F4F3] text-neutral-900 flex flex-col antialiased">
+    <div className="min-h-screen bg-[#F7F3EE] text-neutral-900 flex flex-col antialiased">
       <Header />
 
-      {/* HISTORIAL BANNER SI ESTÁ ACTIVO */}
-      <div className="max-w-4xl mx-auto w-full px-4 pt-4">
-        <HistorySection />
-      </div>
-
       {/* NAVEGACIÓN EN PESTAÑAS (OPTIMIZADA MOBILE-FIRST) */}
-      <div className="sticky top-[57px] z-30 bg-[#F7F4F3]/90 backdrop-blur-md border-b border-neutral-200/80 mb-5">
+      <div className="sticky top-[53px] z-30 bg-[#F7F3EE]/95 backdrop-blur-md border-b border-[#E2DBD0] mb-5">
         <div className="max-w-4xl mx-auto px-4">
-          <nav className="flex space-x-1 sm:space-x-2 py-2 overflow-x-auto no-scrollbar">
+          <nav className="flex space-x-1.5 sm:space-x-2 py-2 overflow-x-auto no-scrollbar">
             <button
               onClick={() => setActiveTab('CARGA')}
-              className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-black transition-all flex-shrink-0 ${
+              className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-black transition-all flex-shrink-0 ${
                 activeTab === 'CARGA'
-                  ? 'bg-[#D6001C] text-white shadow-sm'
-                  : 'bg-white/80 text-neutral-700 hover:bg-white'
+                  ? 'bg-[#D6001C] text-white shadow-xs'
+                  : 'bg-white/90 text-neutral-700 hover:bg-white border border-[#E2DBD0]'
               }`}
             >
               <UserPlus className="w-3.5 h-3.5" />
@@ -43,10 +42,10 @@ const MainAppContent: React.FC = () => {
 
             <button
               onClick={() => setActiveTab('DASHBOARD')}
-              className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-black transition-all flex-shrink-0 ${
+              className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-black transition-all flex-shrink-0 ${
                 activeTab === 'DASHBOARD'
-                  ? 'bg-[#D6001C] text-white shadow-sm'
-                  : 'bg-white/80 text-neutral-700 hover:bg-white'
+                  ? 'bg-[#D6001C] text-white shadow-xs'
+                  : 'bg-white/90 text-neutral-700 hover:bg-white border border-[#E2DBD0]'
               }`}
             >
               <LayoutDashboard className="w-3.5 h-3.5" />
@@ -55,22 +54,22 @@ const MainAppContent: React.FC = () => {
 
             <button
               onClick={() => setActiveTab('SOCIOS')}
-              className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-black transition-all flex-shrink-0 ${
+              className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-black transition-all flex-shrink-0 ${
                 activeTab === 'SOCIOS'
-                  ? 'bg-[#D6001C] text-white shadow-sm'
-                  : 'bg-white/80 text-neutral-700 hover:bg-white'
+                  ? 'bg-[#D6001C] text-white shadow-xs'
+                  : 'bg-white/90 text-neutral-700 hover:bg-white border border-[#E2DBD0]'
               }`}
             >
               <ListOrdered className="w-3.5 h-3.5" />
-              <span>Listado</span>
+              <span>Socios & Calendario</span>
             </button>
 
             <button
               onClick={() => setActiveTab('CIERRE')}
-              className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-black transition-all flex-shrink-0 ${
+              className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-black transition-all flex-shrink-0 ${
                 activeTab === 'CIERRE'
-                  ? 'bg-[#D6001C] text-white shadow-sm'
-                  : 'bg-white/80 text-neutral-700 hover:bg-white'
+                  ? 'bg-[#D6001C] text-white shadow-xs'
+                  : 'bg-white/90 text-neutral-700 hover:bg-white border border-[#E2DBD0]'
               }`}
             >
               <FileSpreadsheet className="w-3.5 h-3.5" />
@@ -78,15 +77,15 @@ const MainAppContent: React.FC = () => {
             </button>
 
             <button
-              onClick={() => setActiveTab('HISTORIAL')}
-              className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-black transition-all flex-shrink-0 ${
-                activeTab === 'HISTORIAL'
-                  ? 'bg-[#D6001C] text-white shadow-sm'
-                  : 'bg-white/80 text-neutral-700 hover:bg-white'
+              onClick={() => setActiveTab('SEMANAL')}
+              className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-black transition-all flex-shrink-0 ${
+                activeTab === 'SEMANAL'
+                  ? 'bg-[#D6001C] text-white shadow-xs'
+                  : 'bg-white/90 text-neutral-700 hover:bg-white border border-[#E2DBD0]'
               }`}
             >
-              <HistoryIcon className="w-3.5 h-3.5" />
-              <span>Historial</span>
+              <CalendarCheck className="w-3.5 h-3.5" />
+              <span>Planilla Semanal</span>
             </button>
           </nav>
         </div>
@@ -96,9 +95,14 @@ const MainAppContent: React.FC = () => {
       <main className="max-w-4xl mx-auto w-full px-4 pb-12 flex-1">
         {activeTab === 'CARGA' && (
           <div className="space-y-4">
-            <MyHoursCard />
+            {/* 1. Cantidad de captadores y horas arriba en dos recuadros lado a lado */}
+            <DayTopControls />
+
+            {/* 2. Formulario de socios responsive optimizado */}
             <PartnerRegistrationForm />
-            <CollectorsCountAdmin />
+
+            {/* 3. Historial de socios en la parte inferior */}
+            <PartnersListWithCalendar />
           </div>
         )}
 
@@ -111,7 +115,7 @@ const MainAppContent: React.FC = () => {
 
         {activeTab === 'SOCIOS' && (
           <div>
-            <PartnersList />
+            <PartnersListWithCalendar />
           </div>
         )}
 
@@ -121,16 +125,16 @@ const MainAppContent: React.FC = () => {
           </div>
         )}
 
-        {activeTab === 'HISTORIAL' && (
+        {activeTab === 'SEMANAL' && (
           <div>
-            <HistorySection />
+            <WeeklyClosingSection />
           </div>
         )}
       </main>
 
       {/* FOOTER */}
-      <footer className="border-t border-neutral-200/80 bg-white/50 py-4 text-center text-xs text-neutral-400">
-        Médicos Sin Fronteras Argentina • Sistema Interno de Captación 3.0 • Buenos Aires
+      <footer className="border-t border-[#E2DBD0] bg-white/40 py-4 text-center text-xs text-neutral-500">
+        Médicos Sin Fronteras Argentina • Sistema Interno de Captación 3.0 • F2F
       </footer>
     </div>
   );

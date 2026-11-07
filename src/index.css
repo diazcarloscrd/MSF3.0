@@ -4,13 +4,19 @@
   :root {
     --msf-red: #D6001C;
     --msf-red-hover: #b80017;
+    --msf-red-light: rgba(214, 0, 28, 0.08);
+    --msf-cream-bg: #F7F3EE;
+    --msf-card-bg: #FFFFFF;
+    --msf-surface: #EFE9E0;
+    --msf-border: #E2DBD0;
   }
 }
 
 body {
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-  background-color: #F7F4F3;
+  font-family: 'Archivo', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background-color: #F7F3EE; /* Suave tono crema para trabajo en exteriores bajo el sol */
   color: #171515;
+  -webkit-tap-highlight-color: transparent;
 }
 
 /* Custom scrollbar hiding */

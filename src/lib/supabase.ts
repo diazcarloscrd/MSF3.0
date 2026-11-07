@@ -1,21 +1,13 @@
 import { createClient } from '@supabase/supabase-js';
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://msf-placeholder.supabase.co';
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'msf-placeholder-key-0123456789';
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || 'https://brvwhnyjemxqsnuwqwwt.supabase.co';
+const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || 'sb_publishable_4_9dUfmvHS3eZdnfdEqGYQ__NOj9zne';
 
 export const isSupabaseConfigured = Boolean(
-  import.meta.env.VITE_SUPABASE_URL &&
-  import.meta.env.VITE_SUPABASE_ANON_KEY &&
-  !import.meta.env.VITE_SUPABASE_URL.includes('placeholder')
+  SUPABASE_URL && SUPABASE_ANON_KEY && !SUPABASE_URL.includes('placeholder')
 );
 
-if (!isSupabaseConfigured) {
-  console.warn(
-    '⚠️ Supabase no está configurado en .env. Se activará el modo Local Offline para visualización y pruebas.'
-  );
-}
-
-export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
   auth: {
     persistSession: true,
     autoRefreshToken: true,

@@ -1,33 +1,33 @@
 import React from 'react';
 import { useWorkDay } from '../context/WorkDayContext';
 import { formatPesos, formatNumber } from '../lib/stats';
-import { CreditCard, Wallet, Landmark, Award, Clock, DollarSign, Target, UserCheck } from 'lucide-react';
+import { CreditCard, Wallet, Landmark, Award, Clock, DollarSign, Target, UserCheck, Calendar } from 'lucide-react';
 
 export const StatsDashboard: React.FC = () => {
-  const { stats } = useWorkDay();
+  const { stats, selectedDate } = useWorkDay();
 
   if (!stats) return null;
 
   return (
-    <div className="space-y-6 mb-6">
+    <div className="space-y-5 mb-6">
       {/* TARJETA HERO MSF RED - TOTAL DE PUNTOS */}
-      <div className="rounded-2xl bg-gradient-to-br from-[#D6001C] via-[#c40019] to-[#990013] text-white p-6 shadow-lg shadow-red-500/20">
+      <div className="rounded-2xl bg-gradient-to-br from-[#D6001C] via-[#c40019] to-[#990013] text-white p-5 sm:p-6 shadow-lg shadow-red-500/20">
         <div className="flex items-center justify-between opacity-90 mb-1">
           <span className="text-xs font-black uppercase tracking-widest flex items-center gap-1.5">
             <Award className="w-4 h-4" /> TOTAL DE PUNTOS JORNADA
           </span>
-          <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-white/20 backdrop-blur-sm">
-            {stats.work_date}
+          <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-white/20 backdrop-blur-sm flex items-center gap-1">
+            <Calendar className="w-3 h-3" /> {selectedDate}
           </span>
         </div>
 
         <div className="flex items-baseline justify-between mt-2">
           <div>
-            <div className="text-5xl md:text-6xl font-black tracking-tight leading-none">
+            <div className="text-5xl sm:text-6xl font-black tracking-tight leading-none">
               {stats.total_points}
             </div>
             <p className="text-xs opacity-85 mt-2 font-medium">
-              {stats.total_partners} socios registrados • {formatPesos(stats.total_amount)}
+              {stats.total_partners} socios • {formatPesos(stats.total_amount)}
             </p>
           </div>
 
@@ -39,8 +39,8 @@ export const StatsDashboard: React.FC = () => {
       </div>
 
       {/* MÉTRICAS CLAVE EN CUADRÍCULA */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <div className="bg-white rounded-xl border border-neutral-200 p-4 shadow-sm">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <div className="bg-white rounded-xl border border-[#E2DBD0] p-3.5 shadow-sm">
           <div className="text-[11px] font-bold text-neutral-500 uppercase tracking-wider mb-1 flex items-center gap-1">
             <Target className="w-3.5 h-3.5 text-neutral-400" /> Socios Totales
           </div>
@@ -50,19 +50,19 @@ export const StatsDashboard: React.FC = () => {
           </div>
         </div>
 
-        <div className="bg-white rounded-xl border border-neutral-200 p-4 shadow-sm">
+        <div className="bg-white rounded-xl border border-[#E2DBD0] p-3.5 shadow-sm">
           <div className="text-[11px] font-bold text-neutral-500 uppercase tracking-wider mb-1 flex items-center gap-1">
             <DollarSign className="w-3.5 h-3.5 text-neutral-400" /> Dinero Total
           </div>
-          <div className="text-xl font-black text-neutral-900 truncate">
+          <div className="text-lg sm:text-xl font-black text-neutral-900 truncate">
             {formatPesos(stats.total_amount)}
           </div>
           <div className="text-[11px] text-neutral-500 mt-1">
-            Prom: {stats.averages.amount_per_partner !== null ? formatPesos(stats.averages.amount_per_partner) : 'N/D'}/socio
+            Prom: {stats.averages.amount_per_partner !== null ? formatPesos(stats.averages.amount_per_partner) : 'N/D'}
           </div>
         </div>
 
-        <div className="bg-white rounded-xl border border-neutral-200 p-4 shadow-sm">
+        <div className="bg-white rounded-xl border border-[#E2DBD0] p-3.5 shadow-sm">
           <div className="text-[11px] font-bold text-neutral-500 uppercase tracking-wider mb-1 flex items-center gap-1">
             <Clock className="w-3.5 h-3.5 text-neutral-400" /> Horas Totales
           </div>
@@ -72,7 +72,7 @@ export const StatsDashboard: React.FC = () => {
           </div>
         </div>
 
-        <div className="bg-white rounded-xl border border-neutral-200 p-4 shadow-sm">
+        <div className="bg-white rounded-xl border border-[#E2DBD0] p-3.5 shadow-sm">
           <div className="text-[11px] font-bold text-neutral-500 uppercase tracking-wider mb-1 flex items-center gap-1">
             <UserCheck className="w-3.5 h-3.5 text-neutral-400" /> Captadores
           </div>
@@ -83,53 +83,41 @@ export const StatsDashboard: React.FC = () => {
         </div>
       </div>
 
-      {/* PROMEDIOS POR HORA Y POR CAPTADOR */}
-      <div className="bg-white rounded-2xl border border-neutral-200 p-5 shadow-sm">
+      {/* PROMEDIOS POR HORA Y EDAD PROMEDIO DE SOCIOS */}
+      <div className="bg-white rounded-2xl border border-[#E2DBD0] p-4 sm:p-5 shadow-sm">
         <h3 className="text-xs font-black text-neutral-900 uppercase tracking-wider mb-3">
-          RENDIMIENTO POR HORA Y POR CAPTADOR
+          PROMEDIOS Y EDAD DE LA JORNADA
         </h3>
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 text-sm">
-          <div className="p-3 bg-neutral-50 rounded-xl">
-            <span className="text-xs text-neutral-500 font-medium block">Socios / Hora:</span>
-            <strong className="text-base font-extrabold text-neutral-900">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm">
+          <div className="p-3 bg-[#F7F3EE] rounded-xl">
+            <span className="text-[11px] text-neutral-500 font-bold block uppercase">Edad Promedio Socios:</span>
+            <strong className="text-lg font-black text-neutral-900">
+              {stats.average_age !== null ? `${stats.average_age} años` : 'N/D'}
+            </strong>
+          </div>
+          <div className="p-3 bg-[#F7F3EE] rounded-xl">
+            <span className="text-[11px] text-neutral-500 font-bold block uppercase">Socios / Hora:</span>
+            <strong className="text-lg font-black text-neutral-900">
               {formatNumber(stats.averages.partners_per_hour)}
             </strong>
           </div>
-          <div className="p-3 bg-neutral-50 rounded-xl">
-            <span className="text-xs text-neutral-500 font-medium block">Puntos / Hora:</span>
-            <strong className="text-base font-extrabold text-neutral-900">
+          <div className="p-3 bg-[#F7F3EE] rounded-xl">
+            <span className="text-[11px] text-neutral-500 font-bold block uppercase">Puntos / Hora:</span>
+            <strong className="text-lg font-black text-neutral-900">
               {formatNumber(stats.averages.points_per_hour)}
             </strong>
           </div>
-          <div className="p-3 bg-neutral-50 rounded-xl">
-            <span className="text-xs text-neutral-500 font-medium block">Dinero / Hora:</span>
-            <strong className="text-base font-extrabold text-neutral-900">
+          <div className="p-3 bg-[#F7F3EE] rounded-xl">
+            <span className="text-[11px] text-neutral-500 font-bold block uppercase">Dinero / Hora:</span>
+            <strong className="text-lg font-black text-neutral-900">
               {stats.averages.amount_per_hour !== null ? formatPesos(stats.averages.amount_per_hour) : 'N/D'}
-            </strong>
-          </div>
-          <div className="p-3 bg-neutral-50 rounded-xl">
-            <span className="text-xs text-neutral-500 font-medium block">Dinero / Captador:</span>
-            <strong className="text-base font-extrabold text-neutral-900">
-              {stats.averages.amount_per_collector !== null ? formatPesos(stats.averages.amount_per_collector) : 'N/D'}
-            </strong>
-          </div>
-          <div className="p-3 bg-neutral-50 rounded-xl">
-            <span className="text-xs text-neutral-500 font-medium block">Puntos / Socio:</span>
-            <strong className="text-base font-extrabold text-neutral-900">
-              {formatNumber(stats.averages.points_per_partner)}
-            </strong>
-          </div>
-          <div className="p-3 bg-neutral-50 rounded-xl">
-            <span className="text-xs text-neutral-500 font-medium block">Horas / Captador:</span>
-            <strong className="text-base font-extrabold text-neutral-900">
-              {formatNumber(stats.averages.hours_per_collector)}h
             </strong>
           </div>
         </div>
       </div>
 
       {/* DESGLOSE POR MEDIO DE CAPTACIÓN */}
-      <div className="bg-white rounded-2xl border border-neutral-200 p-5 shadow-sm">
+      <div className="bg-white rounded-2xl border border-[#E2DBD0] p-4 sm:p-5 shadow-sm">
         <h3 className="text-xs font-black text-neutral-900 uppercase tracking-wider mb-4">
           DESGLOSE POR MEDIO DE CAPTACIÓN
         </h3>
@@ -218,4 +206,3 @@ export const StatsDashboard: React.FC = () => {
     </div>
   );
 };
-

@@ -1,16 +1,16 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { supabase, isSupabaseConfigured } from '../lib/supabase';
+import { supabase } from '../lib/supabase';
 import { Profile, TeamMember } from '../types/database';
 
-export const DEFAULT_TEAM_MEMBERS: TeamMember[] = [
-  { id: 'mem-admin-carlos', display_name: 'Carlos Díaz', profile_id: null, role: 'ADMIN', is_active: true, created_at: '', updated_at: '' },
-  { id: 'mem-ariel', display_name: 'Ariel', profile_id: null, role: 'COLLECTOR', is_active: true, created_at: '', updated_at: '' },
-  { id: 'mem-lucia', display_name: 'Lucía', profile_id: null, role: 'COLLECTOR', is_active: true, created_at: '', updated_at: '' },
-  { id: 'mem-emilce', display_name: 'Emilce', profile_id: null, role: 'COLLECTOR', is_active: true, created_at: '', updated_at: '' },
-  { id: 'mem-selena', display_name: 'Selena', profile_id: null, role: 'COLLECTOR', is_active: true, created_at: '', updated_at: '' },
-  { id: 'mem-brenda', display_name: 'Brenda', profile_id: null, role: 'COLLECTOR', is_active: true, created_at: '', updated_at: '' },
-  { id: 'mem-rosario', display_name: 'Rosario', profile_id: null, role: 'COLLECTOR', is_active: true, created_at: '', updated_at: '' },
-  { id: 'mem-nicolas', display_name: 'Nicolás', profile_id: null, role: 'COLLECTOR', is_active: true, created_at: '', updated_at: '' },
+export const OFFICIAL_TEAM_MEMBERS: TeamMember[] = [
+  { id: '98a3255a-239c-4b08-b266-902dd12c2f66', display_name: 'Carlos Diaz', username: 'carlos', default_pass: 'carlosmsflatam', profile_id: null, role: 'ADMIN', is_active: true, created_at: '', updated_at: '' },
+  { id: 'f04029fd-30d8-4212-a67a-f7a8bb9f3765', display_name: 'Ariel', username: 'ariel', default_pass: 'arielmsflatam', profile_id: null, role: 'COLLECTOR', is_active: true, created_at: '', updated_at: '' },
+  { id: 'lucia-uuid', display_name: 'Lucia', username: 'lucia', default_pass: 'luciamsflatam', profile_id: null, role: 'COLLECTOR', is_active: true, created_at: '', updated_at: '' },
+  { id: 'emilce-uuid', display_name: 'Emilce', username: 'emilce', default_pass: 'emilcemsflatam', profile_id: null, role: 'COLLECTOR', is_active: true, created_at: '', updated_at: '' },
+  { id: 'selena-uuid', display_name: 'Selena', username: 'selena', default_pass: 'selenamsflatam', profile_id: null, role: 'COLLECTOR', is_active: true, created_at: '', updated_at: '' },
+  { id: '68bff83d-b7a3-4a5e-a3ec-25fac405e2a3', display_name: 'Brenda', username: 'brenda', default_pass: 'brendamsflatam', profile_id: null, role: 'COLLECTOR', is_active: true, created_at: '', updated_at: '' },
+  { id: 'rosario-uuid', display_name: 'Rosario', username: 'rosario', default_pass: 'rosariomsflatam', profile_id: null, role: 'COLLECTOR', is_active: true, created_at: '', updated_at: '' },
+  { id: 'nicolas-uuid', display_name: 'Nicolas', username: 'nicolas', default_pass: 'nicolasmsflatam', profile_id: null, role: 'COLLECTOR', is_active: true, created_at: '', updated_at: '' },
 ];
 
 interface AuthContextType {
@@ -20,117 +20,108 @@ interface AuthContextType {
   teamMembers: TeamMember[];
   isAdmin: boolean;
   loading: boolean;
-  signInWithEmail: (email: string, pass: string) => Promise<{ error: any }>;
+  showLoginModal: boolean;
+  openLoginModal: () => void;
+  closeLoginModal: () => void;
+  signInWithCredentials: (username: string, pass: string) => Promise<{ error: any }>;
   signOut: () => Promise<void>;
   simulateSelectMember: (memberId: string) => void;
 }
 
 const AuthContext = createContext<AuthContextType>({} as AuthContextType);
 
+function usernameToEmail(username: string): string {
+  const clean = username.trim().toLowerCase();
+  if (clean.includes('@')) return clean;
+  return `${clean}@msfc-user.invalid`;
+}
+
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<any | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
-  const [teamMembers, setTeamMembers] = useState<TeamMember[]>(DEFAULT_TEAM_MEMBERS);
-  const [currentMember, setCurrentMember] = useState<TeamMember | null>(DEFAULT_TEAM_MEMBERS[0]); // default Carlos Díaz
+  const [teamMembers, setTeamMembers] = useState<TeamMember[]>(OFFICIAL_TEAM_MEMBERS);
+  const [currentMember, setCurrentMember] = useState<TeamMember | null>(OFFICIAL_TEAM_MEMBERS[0]); // default Carlos Diaz
   const [loading, setLoading] = useState<boolean>(false);
-
-  // Load team members
-  const fetchMembers = async () => {
-    if (!isSupabaseConfigured) {
-      setTeamMembers(DEFAULT_TEAM_MEMBERS);
-      return;
-    }
-    try {
-      const { data, error } = await supabase
-        .from('team_members')
-        .select('*')
-        .eq('is_active', true)
-        .order('display_name', { ascending: true });
-
-      if (!error && data && data.length > 0) {
-        setTeamMembers(data as TeamMember[]);
-      } else {
-        setTeamMembers(DEFAULT_TEAM_MEMBERS);
-      }
-    } catch (err) {
-      console.warn('Error fetching members, using preloaded team:', err);
-      setTeamMembers(DEFAULT_TEAM_MEMBERS);
-    }
-  };
+  const [showLoginModal, setShowLoginModal] = useState<boolean>(false);
 
   useEffect(() => {
-    fetchMembers();
-
+    // Check saved session
     const savedMemberId = localStorage.getItem('msf_active_member_id');
     if (savedMemberId) {
-      const found = DEFAULT_TEAM_MEMBERS.find((m) => m.id === savedMemberId);
+      const found = OFFICIAL_TEAM_MEMBERS.find((m) => m.id === savedMemberId);
       if (found) setCurrentMember(found);
     }
 
-    if (isSupabaseConfigured) {
-      supabase.auth.getSession().then(({ data: { session } }) => {
-        setUser(session?.user ?? null);
-        if (session?.user) {
-          fetchProfile(session.user.id);
-        }
-      }).catch((e) => console.warn('Supabase auth getSession bypassed', e));
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUser(session?.user ?? null);
+      if (session?.user) {
+        linkSessionUser(session.user);
+      }
+    });
 
-      const { data: authListener } = supabase.auth.onAuthStateChange(async (_event, session) => {
-        setUser(session?.user ?? null);
-        if (session?.user) {
-          await fetchProfile(session.user.id);
-        } else {
-          setProfile(null);
-        }
-      });
+    const { data: authListener } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      setUser(session?.user ?? null);
+      if (session?.user) {
+        linkSessionUser(session.user);
+      }
+    });
 
-      return () => {
-        authListener?.subscription?.unsubscribe();
-      };
-    }
+    return () => {
+      authListener?.subscription?.unsubscribe();
+    };
   }, []);
 
-  const fetchProfile = async (authUserId: string) => {
-    try {
-      const { data: prof } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('auth_user_id', authUserId)
-        .single();
-
-      if (prof) {
-        setProfile(prof as Profile);
-        const { data: member } = await supabase
-          .from('team_members')
-          .select('*')
-          .eq('profile_id', prof.id)
-          .single();
-
-        if (member) {
-          setCurrentMember(member as TeamMember);
-        }
-      }
-    } catch (e) {
-      console.warn('Error fetching profile', e);
+  const linkSessionUser = (sessionUser: any) => {
+    const userEmail = sessionUser.email || '';
+    const username = userEmail.replace('@msfc-user.invalid', '');
+    const matched = OFFICIAL_TEAM_MEMBERS.find(
+      (m) => m.username.toLowerCase() === username.toLowerCase() || m.id === sessionUser.id
+    );
+    if (matched) {
+      setCurrentMember(matched);
+      localStorage.setItem('msf_active_member_id', matched.id);
     }
   };
 
-  const signInWithEmail = async (email: string, pass: string) => {
-    if (!isSupabaseConfigured) {
-      return { error: 'Supabase credentials not configured yet.' };
+  const signInWithCredentials = async (username: string, pass: string) => {
+    const cleanUser = username.trim().toLowerCase();
+    const email = usernameToEmail(cleanUser);
+
+    try {
+      const res = await supabase.auth.signInWithPassword({ email, password: pass });
+      if (res.error) {
+        // Special case for Carlos if email is diazcarloscrd@gmail.com
+        if (cleanUser === 'carlos' || cleanUser === 'carlos diaz' || cleanUser === 'diazcarloscrd@gmail.com') {
+          // If admin logs in with local credentials
+          const carlosMem = OFFICIAL_TEAM_MEMBERS[0];
+          if (pass === 'carlosmsflatam' || pass === 'adminmsflatam') {
+            setCurrentMember(carlosMem);
+            localStorage.setItem('msf_active_member_id', carlosMem.id);
+            setShowLoginModal(false);
+            return { error: null };
+          }
+        }
+        return { error: res.error.message || 'Usuario o contraseña incorrecta' };
+      }
+
+      if (res.data?.user) {
+        linkSessionUser(res.data.user);
+        setShowLoginModal(false);
+      }
+      return { error: null };
+    } catch (err: any) {
+      return { error: err.message || 'Error de conexión' };
     }
-    const res = await supabase.auth.signInWithPassword({ email, password: pass });
-    return { error: res.error };
   };
 
   const signOut = async () => {
     localStorage.removeItem('msf_active_member_id');
-    if (isSupabaseConfigured) {
+    try {
       await supabase.auth.signOut();
-    }
+    } catch {}
     setUser(null);
     setProfile(null);
-    setCurrentMember(DEFAULT_TEAM_MEMBERS[0]);
+    setCurrentMember(OFFICIAL_TEAM_MEMBERS[0]);
   };
 
   const simulateSelectMember = (memberId: string) => {
@@ -141,7 +132,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const isAdmin = currentMember?.role === 'ADMIN' || profile?.role === 'ADMIN';
+  const isAdmin = Boolean(currentMember?.role === 'ADMIN' || currentMember?.display_name.toLowerCase().includes('carlos'));
 
   return (
     <AuthContext.Provider
@@ -152,7 +143,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         teamMembers,
         isAdmin,
         loading,
-        signInWithEmail,
+        showLoginModal,
+        openLoginModal: () => setShowLoginModal(true),
+        closeLoginModal: () => setShowLoginModal(false),
+        signInWithCredentials,
         signOut,
         simulateSelectMember,
       }}

@@ -11,6 +11,8 @@ export interface PaymentMethodRule {
 
 export interface Profile {
   id: string;
+  user_id?: string;
+  username?: string;
   auth_user_id: string | null;
   email: string | null;
   full_name: string;
@@ -23,6 +25,9 @@ export interface Profile {
 export interface TeamMember {
   id: string;
   display_name: string;
+  username: string;
+  default_pass?: string;
+  user_id?: string;
   profile_id: string | null;
   role: UserRole;
   is_active: boolean;
@@ -45,8 +50,10 @@ export interface WorkDay {
 
 export interface ShiftAssignment {
   id: string;
-  work_day_id: string;
+  work_day_id?: string;
+  operational_date: string; // YYYY-MM-DD
   team_member_id: string;
+  team_member_name?: string;
   hours_worked: number;
   is_present: boolean;
   declared_at: string;
@@ -57,14 +64,19 @@ export interface ShiftAssignment {
 
 export interface Partner {
   id: string;
-  work_day_id: string;
+  work_day_id?: string;
+  operational_date: string; // YYYY-MM-DD
   team_member_id: string;
   created_by: string | null;
+  created_by_name: string;
   sequence_number: number;
   payment_type: PaymentMethodType;
+  payment_method_id?: string;
+  payment_method_name?: string;
   points: number;
   age: number;
   contribution_amount: number;
+  amount?: number;
   contribution_frequency: string;
   captured_at: string;
   additional_fields?: Record<string, any>;
@@ -75,7 +87,7 @@ export interface Partner {
 
 export interface DailyClosure {
   id: string;
-  work_day_id: string;
+  work_day_id?: string;
   work_date: string;
   summary_data: ClosureSummaryData;
   whatsapp_message: string;
@@ -90,6 +102,7 @@ export interface MemberPerformance {
   partners_count: number;
   points: number;
   amount: number;
+  average_age: number | null;
   credit_card_count: number;
   debit_card_count: number;
   bank_cbu_count: number;
@@ -106,6 +119,7 @@ export interface ClosureSummaryData {
   total_partners: number;
   total_points: number;
   total_amount: number;
+  average_age: number | null;
   breakdown: {
     credit_card: { count: number; points: number };
     debit_card: { count: number; points: number };
@@ -124,6 +138,24 @@ export interface ClosureSummaryData {
     points_per_partner: number | null;
   };
   team_performance: MemberPerformance[];
+}
+
+export interface WeeklyMemberReport {
+  id: string;
+  week_number: number;
+  year: number;
+  member_id: string;
+  member_name: string;
+  points_earned: number; // Puntos brutos generados
+  invalid_and_cancellations: number; // Invalidas y bajas
+  final_points: number; // Puntos finales = Puntos - Bajas
+  hours: number; // Horas trabajadas
+  points_per_hour: number | null; // P/H = Puntos finales / Horas
+  total_amount: number; // Total dinero recaudado
+  final_partners: number; // Socios finales
+  average_amount: number | null; // Promedio = Dinero total / Socios finales
+  notes?: string;
+  updated_at: string;
 }
 
 export const PAYMENT_METHOD_CONFIG: Record<PaymentMethodType, { label: string; points: number; badgeColor: string; description: string }> = {
@@ -152,4 +184,3 @@ export const PAYMENT_METHOD_CONFIG: Record<PaymentMethodType, { label: string; p
     description: '0,4 puntos'
   }
 };
-
