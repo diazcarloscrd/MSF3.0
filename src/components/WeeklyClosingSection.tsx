@@ -4,52 +4,59 @@ import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
 import { formatPesos, formatNumber } from '../lib/stats';
 import { WeeklyMemberReport } from '../types/database';
-import { Save, Check, Calendar, Info, FileSpreadsheet, Sparkles, RefreshCw, UserCheck } from 'lucide-react';
+import { Save, Check, Calendar, Info, FileSpreadsheet, RefreshCw, UserCheck } from 'lucide-react';
 
 export const WeeklyClosingSection: React.FC = () => {
-  const { teamMembers, currentMember, isAdmin } = useAuth();
+  const { teamMembers, currentMember } = useAuth();
   const { weeklyReports, saveWeeklyReport } = useWorkDay();
 
-  // Helper para calcular la semana y fechas de lunes a domingo
-  const getWeekNumber = (date: Date) => {
-    const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
-    const dayNum = d.getUTCDay() || 7;
-    d.setUTCDate(d.getUTCDate() + 4 - dayNum);
-    const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
-    return Math.ceil(((d.getTime() - yearStart.getTime()) / 86400000 + 1) / 7);
+  // Cálculo exacto ISO-8601 de semana del año
+  const getISOWeek = (date: Date) => {
+    const target = new Date(date.valueOf());
+    const dayNr = (date.getDay() + 6) % 7; // Lunes = 0, Domingo = 6
+    target.setDate(target.getDate() - dayNr + 3); // Jueves más cercano
+    const firstThursday = target.valueOf();
+    target.setMonth(0, 1);
+    if (target.getDay() !== 4) {
+      target.setMonth(0, 1 + ((4 - target.getDay()) + 7) % 7);
+    }
+    return 1 + Math.ceil((firstThursday - target.valueOf()) / 604800000);
   };
 
   const currentYear = new Date().getFullYear();
-  const [selectedWeek, setSelectedWeek] = useState<number>(getWeekNumber(new Date()));
+  const [selectedWeek, setSelectedWeek] = useState<number>(getISOWeek(new Date()));
   const [selectedMemberId, setSelectedMemberId] = useState<string>(currentMember?.id || '');
   const [savedSuccess, setSavedSuccess] = useState<string | null>(null);
   const [isAutoCalculating, setIsAutoCalculating] = useState<boolean>(false);
 
-  // Fechas correspondientes a la semana seleccionada (Lunes a Domingo)
+  // Rango de fechas Lunes a Domingo para la semana ISO seleccionada
   const weekDateRange = useMemo(() => {
-    const simple = new Date(currentYear, 0, 1 + (selectedWeek - 1) * 7);
-    const dow = simple.getDay();
-    const ISOweekStart = simple;
-    if (dow <= 4) {
-      ISOweekStart.setDate(simple.getDate() - simple.getDay() + 1);
-    } else {
-      ISOweekStart.setDate(simple.getDate() + 8 - simple.getDay());
-    }
-    const startStr = ISOweekStart.toISOString().split('T')[0];
-    const end = new Date(ISOweekStart);
-    end.setDate(end.getDate() + 6);
-    const endStr = end.toISOString().split('T')[0];
+    // Encontrar el lunes de la semana ISO
+    const jan4 = new Date(currentYear, 0, 4);
+    const dayOfWeek = (jan4.getDay() + 6) % 7; // Lunes = 0
+    const mondayFirstWeek = new Date(jan4);
+    mondayFirstWeek.setDate(jan4.getDate() - dayOfWeek);
+
+    const targetMonday = new Date(mondayFirstWeek);
+    targetMonday.setDate(mondayFirstWeek.getDate() + (selectedWeek - 1) * 7);
+
+    const targetSunday = new Date(targetMonday);
+    targetSunday.setDate(targetMonday.getDate() + 6);
+
+    const pad = (n: number) => n.toString().padStart(2, '0');
+    const startStr = `${targetMonday.getFullYear()}-${pad(targetMonday.getMonth() + 1)}-${pad(targetMonday.getDate())}`;
+    const endStr = `${targetSunday.getFullYear()}-${pad(targetSunday.getMonth() + 1)}-${pad(targetSunday.getDate())}`;
+
     return { startStr, endStr };
   }, [selectedWeek, currentYear]);
 
-  // Actualizar el miembro seleccionado si cambia el usuario activo
+  // Actualizar selección cuando cambie el captador logueado
   useEffect(() => {
     if (currentMember?.id) {
       setSelectedMemberId(currentMember.id);
     }
   }, [currentMember?.id]);
 
-  // Captadores activos excluyendo a Morena
   const activeMembers = useMemo(() => {
     return teamMembers.filter((m) => m.is_active && m.display_name.toLowerCase() !== 'morena');
   }, [teamMembers]);
@@ -58,7 +65,6 @@ export const WeeklyClosingSection: React.FC = () => {
     return activeMembers.find((m) => m.id === selectedMemberId) || activeMembers[0];
   }, [activeMembers, selectedMemberId]);
 
-  // Form State para la semana seleccionada
   const [formState, setFormState] = useState<{
     points_earned: string;
     invalid_and_cancellations: string;
@@ -73,13 +79,15 @@ export const WeeklyClosingSection: React.FC = () => {
     final_partners: '0',
   });
 
-  // Cargar datos existentes o autocalcular desde Supabase
   const loadWeekDataForMember = async (member: typeof targetMember) => {
     if (!member) return;
 
-    // 1. Revisar si ya hay un reporte guardado para esta semana y miembro
+    // 1. Revisar si ya hay un reporte guardado para esta semana
     const existing = weeklyReports.find(
-      (r) => r.member_id === member.id && r.week_number === selectedWeek && r.year === currentYear
+      (r) =>
+        r.member_id === member.id &&
+        r.week_number === selectedWeek &&
+        r.year === currentYear
     );
 
     if (existing) {
@@ -93,7 +101,7 @@ export const WeeklyClosingSection: React.FC = () => {
       return;
     }
 
-    // 2. Si no hay reporte guardado, autocalcular con los datos de Supabase de esa semana
+    // 2. Si no hay reporte guardado, autocalcular con la base de datos de Supabase
     await autoAggregateFromDatabase(member);
   };
 
@@ -101,7 +109,7 @@ export const WeeklyClosingSection: React.FC = () => {
     if (!member) return;
     setIsAutoCalculating(true);
     try {
-      // Buscar socios de ese captador entre startStr y endStr
+      // Buscar socios de ese captador en la semana (Lunes a Domingo)
       const { data: weekSocios } = await supabase
         .from('socios')
         .select('*')
@@ -111,19 +119,21 @@ export const WeeklyClosingSection: React.FC = () => {
       const memberSocios = (weekSocios || []).filter(
         (s) =>
           s.created_by === member.id ||
-          s.created_by_name?.toLowerCase() === member.display_name.toLowerCase()
+          s.created_by_name?.toLowerCase().includes(member.display_name.toLowerCase().split(' ')[0])
       );
 
       const totalPts = Number(memberSocios.reduce((sum, s) => sum + Number(s.points || 0), 0).toFixed(2));
       const totalAmt = Number(memberSocios.reduce((sum, s) => sum + Number(s.amount || 0), 0).toFixed(2));
       const totalSocios = memberSocios.length;
 
-      // Calcular horas de la semana desde las jornadas guardadas localmente
+      // Buscar horas trabajadas en las jornadas de esa semana
       let totalHrs = 0;
       for (let i = 0; i <= 6; i++) {
-        const d = new Date(weekDateRange.startStr);
+        const d = new Date(weekDateRange.startStr + 'T12:00:00Z');
         d.setDate(d.getDate() + i);
-        const dStr = d.toISOString().split('T')[0];
+        const pad = (n: number) => n.toString().padStart(2, '0');
+        const dStr = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+
         const saved = localStorage.getItem(`msf_shifts_${dStr}`);
         if (saved) {
           try {
@@ -131,7 +141,7 @@ export const WeeklyClosingSection: React.FC = () => {
             const sh = arr.find(
               (x: any) =>
                 x.team_member_id === member.id ||
-                x.team_member_name?.toLowerCase() === member.display_name.toLowerCase()
+                x.team_member_name?.toLowerCase().includes(member.display_name.toLowerCase().split(' ')[0])
             );
             if (sh) totalHrs += Number(sh.hours_worked || 0);
           } catch {}
@@ -158,7 +168,7 @@ export const WeeklyClosingSection: React.FC = () => {
     }
   }, [selectedWeek, targetMember?.id]);
 
-  // Fórmulas Automáticas
+  // Fórmulas Automáticas y Exactas
   const points_earned = parseFloat(formState.points_earned) || 0;
   const invalid_and_cancellations = parseFloat(formState.invalid_and_cancellations) || 0;
   const final_points = Number((points_earned - invalid_and_cancellations).toFixed(2));
@@ -190,7 +200,7 @@ export const WeeklyClosingSection: React.FC = () => {
     };
 
     saveWeeklyReport(report);
-    setSavedSuccess(`¡Planilla guardada exitosamente para ${targetMember.display_name}!`);
+    setSavedSuccess(`¡Planilla semanal guardada para ${targetMember.display_name}!`);
     setTimeout(() => setSavedSuccess(null), 3000);
   };
 
@@ -204,7 +214,7 @@ export const WeeklyClosingSection: React.FC = () => {
             PROMEDIO SEMANAL INDIVIDUAL
           </h3>
           <p className="text-xs text-neutral-500 font-medium mt-0.5">
-            Completado automático con datos diarios de la semana • Campos editables para ajustes
+            Semana {selectedWeek} ({weekDateRange.startStr} al {weekDateRange.endStr}) • Autocompletado exacto
           </p>
         </div>
 
@@ -249,7 +259,7 @@ export const WeeklyClosingSection: React.FC = () => {
         </div>
       )}
 
-      {/* RECUADRO DE REPORTE SEMANAL TIPO PLANILLA OFICIAL (FOTO 2) */}
+      {/* PLANILLA SEMANAL OFICIAL */}
       <div className="bg-[#F7F3EE]/50 border-2 border-[#E2DBD0] rounded-2xl p-4 sm:p-5 mb-5">
         <div className="flex items-center justify-between mb-4 border-b border-[#E2DBD0] pb-3">
           <div className="flex items-center gap-2">
@@ -270,7 +280,7 @@ export const WeeklyClosingSection: React.FC = () => {
           </button>
         </div>
 
-        {/* CUADRÍCULA DE CAMPOS EXACTA DE LA PLANILLA OFICIAL */}
+        {/* CAMPOS EXACTOS DE LA PLANILLA OFICIAL (FOTO 2) */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
           {/* SEMANA N° */}
           <div className="bg-white p-3 rounded-xl border border-[#E2DBD0]">
@@ -322,7 +332,7 @@ export const WeeklyClosingSection: React.FC = () => {
 
           {/* P/H (AUTOMÁTICO) */}
           <div className="bg-red-50/70 p-3 rounded-xl border border-red-200">
-            <span className="text-[10px] font-black uppercase text-[#D6001C] block">P / H (PUNTOS/HORA)</span>
+            <span className="text-[10px] font-black uppercase text-[#D6001C] block">P / H</span>
             <span className="text-xl font-black text-[#D6001C]">{formatNumber(points_per_hour)}</span>
           </div>
 
@@ -346,14 +356,14 @@ export const WeeklyClosingSection: React.FC = () => {
           </div>
         </div>
 
-        {/* CAMPO DINERO TOTAL RECAUDADO (BASE PARA EL PROMEDIO) */}
+        {/* DINERO TOTAL RECAUDADO */}
         <div className="bg-white p-3.5 rounded-xl border border-[#E2DBD0] flex items-center justify-between mb-4">
           <div>
             <span className="text-[11px] font-black uppercase text-neutral-600 block">
               TOTAL DINERO RECAUDADO EN LA SEMANA
             </span>
             <span className="text-[11px] text-neutral-400">
-              Base para calcular el promedio (Total Dinero / Socios Finales)
+              Base para el cálculo del promedio (Total Dinero / Socios Finales)
             </span>
           </div>
           <div className="w-36">
@@ -367,7 +377,7 @@ export const WeeklyClosingSection: React.FC = () => {
           </div>
         </div>
 
-        {/* BOTÓN DE GUARDADO */}
+        {/* BOTÓN GUARDAR */}
         <button
           type="button"
           onClick={handleSave}
@@ -378,10 +388,10 @@ export const WeeklyClosingSection: React.FC = () => {
         </button>
       </div>
 
-      {/* TABLA COMPARATIVA CON TODOS LOS INTEGRANTES DE LA SEMANA */}
+      {/* RESUMEN DE TODOS LOS CAPTADORES */}
       <div>
         <h4 className="text-xs font-black text-neutral-800 uppercase tracking-wider mb-2.5">
-          RESUMEN SEMANA {selectedWeek} – TODOS LOS INTEGRANTES
+          PLANILLA SEMANA {selectedWeek} – EQUIPO COMPLETO
         </h4>
         <div className="overflow-x-auto -mx-4 sm:-mx-6 px-4 sm:px-6">
           <table className="w-full text-left text-xs min-w-[700px]">
@@ -416,7 +426,7 @@ export const WeeklyClosingSection: React.FC = () => {
                       {m.display_name}
                       {isSelected && (
                         <span className="ml-1.5 text-[9px] font-black px-1.5 py-0.5 rounded bg-[#D6001C] text-white">
-                          SELECCIONADO
+                          ACTIVO
                         </span>
                       )}
                     </td>
@@ -439,7 +449,7 @@ export const WeeklyClosingSection: React.FC = () => {
                         onClick={() => setSelectedMemberId(m.id)}
                         className="text-[11px] font-bold text-neutral-600 hover:text-[#D6001C] underline"
                       >
-                        Editar
+                        Ver / Editar
                       </button>
                     </td>
                   </tr>

@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useWorkDay } from '../context/WorkDayContext';
 import { formatBuenosAiresDate } from '../lib/stats';
-import { UserCheck, LogIn, LogOut, KeyRound, X } from 'lucide-react';
+import { UserCheck, LogIn, LogOut, X, Shield } from 'lucide-react';
 
 export const Header: React.FC = () => {
   const {
@@ -10,6 +10,7 @@ export const Header: React.FC = () => {
     teamMembers,
     simulateSelectMember,
     isAdmin,
+    isAuthenticated,
     signOut,
     showLoginModal,
     openLoginModal,
@@ -57,7 +58,7 @@ export const Header: React.FC = () => {
             </div>
           </div>
 
-          {/* DERECHA: ESTADO, SELECTOR RÁPIDO DE ADMIN Y BOTÓN LOGIN */}
+          {/* DERECHA: ESTADO, SELECTOR RÁPIDO DE ADMIN Y BOTÓN DINÁMICO LOGIN/LOGOUT */}
           <div className="flex items-center gap-2">
             {/* Live Indicator */}
             <div
@@ -71,38 +72,44 @@ export const Header: React.FC = () => {
             </div>
 
             {/* MENÚ ADMINISTRADOR PARA CAMBIAR FÁCILMENTE DE CAPTADOR */}
-            <div className="flex items-center bg-white rounded-xl px-2 py-1 border border-[#E2DBD0] shadow-xs">
-              <UserCheck className="w-3.5 h-3.5 text-neutral-500 mr-1" />
-              <select
-                value={currentMember?.id || ''}
-                onChange={(e) => simulateSelectMember(e.target.value)}
-                className="text-xs font-black bg-transparent text-neutral-900 pr-1 py-0.5 focus:outline-none cursor-pointer max-w-[120px] sm:max-w-none"
-              >
-                {teamMembers.map((member) => (
-                  <option key={member.id} value={member.id}>
-                    {member.display_name} {member.role === 'ADMIN' ? '(ADMIN)' : ''}
-                  </option>
-                ))}
-              </select>
-            </div>
+            {isAdmin && (
+              <div className="flex items-center bg-white rounded-xl px-2 py-1 border border-[#E2DBD0] shadow-xs">
+                <Shield className="w-3.5 h-3.5 text-[#D6001C] mr-1" />
+                <select
+                  value={currentMember?.id || ''}
+                  onChange={(e) => simulateSelectMember(e.target.value)}
+                  className="text-xs font-black bg-transparent text-neutral-900 pr-1 py-0.5 focus:outline-none cursor-pointer max-w-[120px] sm:max-w-none"
+                  title="Cambio rápido de captador (Modo Administrador)"
+                >
+                  {teamMembers.map((member) => (
+                    <option key={member.id} value={member.id}>
+                      {member.display_name} {member.role === 'ADMIN' ? '(ADMIN)' : ''}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
 
-            {/* BOTÓN INICIAR SESIÓN CON CONTRASEÑA */}
-            <button
-              onClick={openLoginModal}
-              title="Iniciar sesión con contraseña"
-              className="px-2.5 py-1.5 bg-[#D6001C] hover:bg-[#b80017] text-white text-xs font-black rounded-xl shadow-xs flex items-center gap-1 transition-all"
-            >
-              <KeyRound className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Iniciar Sesión</span>
-            </button>
-
-            {currentMember && (
+            {/* BOTÓN DINÁMICO: SI ESTÁ LOGUEADO MUESTRA "CERRAR SESIÓN", SI NO MUESTRA "INICIAR SESIÓN" */}
+            {isAuthenticated ? (
               <button
+                type="button"
                 onClick={signOut}
-                title="Cerrar sesión"
-                className="p-1.5 text-neutral-400 hover:text-neutral-700 rounded-lg hover:bg-neutral-200 transition-colors"
+                title="Cerrar sesión del captador"
+                className="px-2.5 py-1.5 bg-neutral-900 hover:bg-black text-white text-xs font-black rounded-xl shadow-xs flex items-center gap-1.5 transition-all"
               >
-                <LogOut className="w-4 h-4" />
+                <LogOut className="w-3.5 h-3.5" />
+                <span>Cerrar Sesión ({currentMember?.display_name})</span>
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={openLoginModal}
+                title="Iniciar sesión con contraseña"
+                className="px-2.5 py-1.5 bg-[#D6001C] hover:bg-[#b80017] text-white text-xs font-black rounded-xl shadow-xs flex items-center gap-1.5 transition-all"
+              >
+                <LogIn className="w-3.5 h-3.5" />
+                <span>Iniciar Sesión</span>
               </button>
             )}
           </div>
@@ -126,7 +133,7 @@ export const Header: React.FC = () => {
               </div>
               <div>
                 <h3 className="text-sm font-black text-neutral-900">Iniciar Sesión</h3>
-                <p className="text-[11px] text-neutral-500 font-medium">Acceso para captadores y administrador</p>
+                <p className="text-[11px] text-neutral-500 font-medium">Ingresá tu usuario y contraseña asignada</p>
               </div>
             </div>
 
@@ -143,7 +150,7 @@ export const Header: React.FC = () => {
                 </label>
                 <input
                   type="text"
-                  placeholder="Ej: ariel, lucia o tu email"
+                  placeholder="Ej: ariel, lucia, carlos"
                   value={loginUser}
                   onChange={(e) => setLoginUser(e.target.value)}
                   className="w-full h-11 px-3 text-xs font-bold bg-[#F7F3EE] border border-neutral-300 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#D6001C]"
@@ -157,7 +164,7 @@ export const Header: React.FC = () => {
                 </label>
                 <input
                   type="password"
-                  placeholder="Tu contraseña asignada"
+                  placeholder="Contraseña"
                   value={loginPass}
                   onChange={(e) => setLoginPass(e.target.value)}
                   className="w-full h-11 px-3 text-xs font-bold bg-[#F7F3EE] border border-neutral-300 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#D6001C]"

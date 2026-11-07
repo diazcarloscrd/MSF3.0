@@ -1,7 +1,15 @@
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
-import { WorkDay, ShiftAssignment, Partner, DailyClosure, ClosureSummaryData, WeeklyMemberReport } from '../types/database';
-import { calculateLiveDayStats, generateWhatsAppReport } from '../lib/stats';
+import {
+  WorkDay,
+  ShiftAssignment,
+  Partner,
+  DailyClosure,
+  ClosureSummaryData,
+  WeeklyMemberReport,
+  MemberWeeklySchedule,
+} from '../types/database';
+import { calculateLiveDayStats } from '../lib/stats';
 import { useAuth } from './AuthContext';
 
 interface WorkDayContextType {
@@ -23,6 +31,7 @@ interface WorkDayContextType {
   updateMemberHours: (memberId: string, hours: number) => Promise<{ error: any }>;
   updateDeclaredCollectors: (count: number) => Promise<{ error: any }>;
   addPartner: (data: { age: number; amount: number; paymentType: string }) => Promise<{ data?: Partner; error?: any }>;
+  updatePartner: (partnerId: string, data: { age: number; amount: number; paymentType: string }) => Promise<{ error: any }>;
   deletePartner: (partnerId: string) => Promise<{ error: any }>;
   closeCurrentDay: (auto?: boolean) => Promise<{ data?: DailyClosure; error?: any }>;
   reopenDay: (workDayId: string) => Promise<{ error: any }>;
@@ -30,6 +39,8 @@ interface WorkDayContextType {
   refreshData: () => Promise<void>;
   weeklyReports: WeeklyMemberReport[];
   saveWeeklyReport: (report: WeeklyMemberReport) => void;
+  weeklySchedules: MemberWeeklySchedule[];
+  saveMemberSchedule: (schedule: MemberWeeklySchedule) => void;
 }
 
 const WorkDayContext = createContext<WorkDayContextType>({} as WorkDayContextType);
@@ -39,6 +50,7 @@ const getTodayBuenosAiresDate = () => {
 };
 
 const WEEKLY_STORAGE_KEY = 'msf_weekly_reports_v1';
+const SCHEDULES_STORAGE_KEY = 'msf_weekly_schedules_v1';
 
 export const WorkDayProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { currentMember, teamMembers, isAdmin } = useAuth();
@@ -66,25 +78,32 @@ export const WorkDayProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const [loading, setLoading] = useState<boolean>(false);
   const [isConnected, setIsConnected] = useState<boolean>(true);
   const [weeklyReports, setWeeklyReports] = useState<WeeklyMemberReport[]>([]);
+  const [weeklySchedules, setWeeklySchedules] = useState<MemberWeeklySchedule[]>([]);
 
   const isViewingHistory = selectedDate !== todayStr;
   const activeWorkDay = currentWorkDay;
 
-  // Load weekly reports from local storage
+  // Cargar reportes semanales y cronogramas desde storage
   useEffect(() => {
     try {
-      const saved = localStorage.getItem(WEEKLY_STORAGE_KEY);
-      if (saved) {
-        setWeeklyReports(JSON.parse(saved));
+      const savedWeekly = localStorage.getItem(WEEKLY_STORAGE_KEY);
+      if (savedWeekly) {
+        setWeeklyReports(JSON.parse(savedWeekly));
+      }
+      const savedSchedules = localStorage.getItem(SCHEDULES_STORAGE_KEY);
+      if (savedSchedules) {
+        setWeeklySchedules(JSON.parse(savedSchedules));
       }
     } catch (e) {
-      console.warn('Error reading weekly reports from storage', e);
+      console.warn('Error reading storage', e);
     }
   }, []);
 
   const saveWeeklyReport = (report: WeeklyMemberReport) => {
     setWeeklyReports((prev) => {
-      const idx = prev.findIndex((r) => r.week_number === report.week_number && r.year === report.year && r.member_id === report.member_id);
+      const idx = prev.findIndex(
+        (r) => r.week_number === report.week_number && r.year === report.year && r.member_id === report.member_id
+      );
       let updated: WeeklyMemberReport[];
       if (idx >= 0) {
         updated = [...prev];
@@ -101,7 +120,28 @@ export const WorkDayProvider: React.FC<{ children: React.ReactNode }> = ({ child
     });
   };
 
-  // Fetch all available operational dates from Supabase
+  const saveMemberSchedule = (schedule: MemberWeeklySchedule) => {
+    setWeeklySchedules((prev) => {
+      const idx = prev.findIndex(
+        (s) => s.week_number === schedule.week_number && s.year === schedule.year && s.member_id === schedule.member_id
+      );
+      let updated: MemberWeeklySchedule[];
+      if (idx >= 0) {
+        updated = [...prev];
+        updated[idx] = schedule;
+      } else {
+        updated = [...prev, schedule];
+      }
+      try {
+        localStorage.setItem(SCHEDULES_STORAGE_KEY, JSON.stringify(updated));
+      } catch (e) {
+        console.warn('Error saving schedule', e);
+      }
+      return updated;
+    });
+  };
+
+  // Cargar fechas disponibles de socios
   const loadAvailableDates = useCallback(async () => {
     try {
       const { data } = await supabase
@@ -118,7 +158,7 @@ export const WorkDayProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
   }, [todayStr]);
 
-  // Load partners and daily settings for the selectedDate
+  // Cargar socios y configuración de la fecha seleccionada
   const loadDayData = useCallback(async (dateToLoad: string) => {
     setLoading(true);
     try {
@@ -172,13 +212,12 @@ export const WorkDayProvider: React.FC<{ children: React.ReactNode }> = ({ child
         declared_collectors_count: declaredCount,
       }));
 
-      // 3. Load shifts for this date (from local state/shifts store)
+      // 3. Load shifts for this date
       const savedShiftsKey = `msf_shifts_${dateToLoad}`;
       const savedLocalShifts = localStorage.getItem(savedShiftsKey);
       if (savedLocalShifts) {
         setShifts(JSON.parse(savedLocalShifts));
       } else {
-        // default 0 hours for all members
         const initialShifts: ShiftAssignment[] = teamMembers.map((m) => ({
           id: `shift-${dateToLoad}-${m.id}`,
           operational_date: dateToLoad,
@@ -240,7 +279,9 @@ export const WorkDayProvider: React.FC<{ children: React.ReactNode }> = ({ child
   };
 
   const myShift = shifts.find(
-    (s) => s.team_member_id === currentMember?.id || s.team_member_name?.toLowerCase() === currentMember?.display_name.toLowerCase()
+    (s) =>
+      s.team_member_id === currentMember?.id ||
+      s.team_member_name?.toLowerCase() === currentMember?.display_name.toLowerCase()
   );
   const myHours = myShift ? Number(myShift.hours_worked) : 0;
 
@@ -267,6 +308,7 @@ export const WorkDayProvider: React.FC<{ children: React.ReactNode }> = ({ child
     return updateMemberHours(currentMember.id, hours);
   };
 
+  // Cantidad de captadores: Ahora modificable por cualquiera del equipo
   const updateDeclaredCollectors = async (count: number) => {
     const numCount = parseInt(String(count), 10);
     if (isNaN(numCount) || numCount < 0) return { error: 'Número inválido' };
@@ -351,6 +393,68 @@ export const WorkDayProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
   };
 
+  // Modificar socio (Captador puede modificar sus propios socios; Admin puede modificar cualquiera)
+  const updatePartner = async (
+    partnerId: string,
+    data: { age: number; amount: number; paymentType: string }
+  ) => {
+    const p = partners.find((item) => item.id === partnerId);
+    if (!p) return { error: 'Registro no encontrado' };
+
+    if (!isAdmin && p.team_member_id !== currentMember?.id && p.created_by_name !== currentMember?.display_name) {
+      return { error: 'No tienes permiso para modificar socios de otros captadores' };
+    }
+
+    let pts = 0;
+    let methodId = 'credito';
+    let methodName = 'Tarjeta de crédito';
+
+    switch (data.paymentType) {
+      case 'credit_card':
+        pts = 1.0;
+        methodId = 'credito';
+        methodName = 'Tarjeta de crédito';
+        break;
+      case 'debit_card':
+        pts = 0.7;
+        methodId = 'debito';
+        methodName = 'Tarjeta de débito';
+        break;
+      case 'bank_cbu':
+        pts = 0.6;
+        methodId = 'cbu';
+        methodName = 'CBU bancario';
+        break;
+      case 'prepaid_wallet':
+        pts = 0.4;
+        methodId = 'prepaga';
+        methodName = 'Tarjeta prepaga / Billetera virtual';
+        break;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('socios')
+        .update({
+          age: data.age,
+          amount: data.amount,
+          payment_method_id: methodId,
+          payment_method_name: methodName,
+          points: pts,
+          updated_at: new Date().toISOString(),
+          updated_by: currentMember?.id || null,
+        })
+        .eq('id', partnerId);
+
+      if (error) throw error;
+      await loadDayData(selectedDate);
+      return { error: null };
+    } catch (err: any) {
+      return { error: err.message || err };
+    }
+  };
+
+  // Eliminar socio (Captador sus propios socios; Admin todos)
   const deletePartner = async (partnerId: string) => {
     const p = partners.find((item) => item.id === partnerId);
     if (!p) return { error: 'Registro no encontrado' };
@@ -409,6 +513,7 @@ export const WorkDayProvider: React.FC<{ children: React.ReactNode }> = ({ child
         updateMemberHours,
         updateDeclaredCollectors,
         addPartner,
+        updatePartner,
         deletePartner,
         closeCurrentDay,
         reopenDay,
@@ -416,6 +521,8 @@ export const WorkDayProvider: React.FC<{ children: React.ReactNode }> = ({ child
         refreshData,
         weeklyReports,
         saveWeeklyReport,
+        weeklySchedules,
+        saveMemberSchedule,
       }}
     >
       {children}

@@ -12,14 +12,14 @@ export const DayTopControls: React.FC = () => {
     partners,
     shifts,
   } = useWorkDay();
-  const { currentMember, isAdmin } = useAuth();
+  const { currentMember } = useAuth();
 
   // Estados de Horas
   const [hoursVal, setHoursVal] = useState<string>(myHours.toString());
   const [isEditingHours, setIsEditingHours] = useState<boolean>(false);
   const [isSavingHours, setIsSavingHours] = useState<boolean>(false);
 
-  // Estados de Captadores
+  // Estados de Captadores (AHORA CUALQUIER CAPTADOR PUEDE MODIFICARLO)
   const declared = activeWorkDay?.declared_collectors_count || 0;
   const [collectorsVal, setCollectorsVal] = useState<string>(declared.toString());
   const [isEditingCollectors, setIsEditingCollectors] = useState<boolean>(false);
@@ -155,7 +155,7 @@ export const DayTopControls: React.FC = () => {
           )}
         </div>
 
-        {/* 2. RECUADRO CANTIDAD DE CAPTADORES */}
+        {/* 2. RECUADRO CANTIDAD DE CAPTADORES (EDITABLE POR CUALQUIER INTEGRANTE) */}
         <div className="bg-white rounded-2xl border border-[#E2DBD0] p-4 shadow-sm flex flex-col justify-between">
           <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-2">
@@ -167,12 +167,12 @@ export const DayTopControls: React.FC = () => {
                   CAPTADORES PRESENTES
                 </h3>
                 <span className="text-[11px] font-bold text-neutral-500">
-                  Base de promedios generales
+                  Modificable por el equipo
                 </span>
               </div>
             </div>
 
-            {isAdmin && !isEditingCollectors && (
+            {!isEditingCollectors && (
               <button
                 type="button"
                 onClick={() => {
@@ -182,7 +182,7 @@ export const DayTopControls: React.FC = () => {
                 className="text-xs font-bold text-neutral-500 hover:text-[#D6001C] flex items-center gap-1 px-2 py-1 rounded-lg hover:bg-neutral-100 transition-colors"
               >
                 <Edit2 className="w-3.5 h-3.5" />
-                Editar
+                Modificar
               </button>
             )}
           </div>

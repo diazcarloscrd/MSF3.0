@@ -10,16 +10,18 @@ import { IndividualPerformance } from './components/IndividualPerformance';
 import { PartnersListWithCalendar } from './components/PartnersListWithCalendar';
 import { DayClosureSection } from './components/DayClosureSection';
 import { WeeklyClosingSection } from './components/WeeklyClosingSection';
+import { WeeklyScheduleSection } from './components/WeeklyScheduleSection';
 import {
   LayoutDashboard,
   UserPlus,
   ListOrdered,
   FileSpreadsheet,
   CalendarCheck,
+  CalendarDays,
 } from 'lucide-react';
 
 const MainAppContent: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<'CARGA' | 'DASHBOARD' | 'SOCIOS' | 'CIERRE' | 'SEMANAL'>('CARGA');
+  const [activeTab, setActiveTab] = useState<'CARGA' | 'DASHBOARD' | 'SOCIOS' | 'CIERRE' | 'SEMANAL' | 'CRONOGRAMA'>('CARGA');
 
   return (
     <div className="min-h-screen bg-[#F7F3EE] text-neutral-900 flex flex-col antialiased">
@@ -88,6 +90,18 @@ const MainAppContent: React.FC = () => {
               <CalendarCheck className="w-3.5 h-3.5" />
               <span>Planilla Semanal</span>
             </button>
+
+            <button
+              onClick={() => setActiveTab('CRONOGRAMA')}
+              className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-black transition-all flex-shrink-0 ${
+                activeTab === 'CRONOGRAMA'
+                  ? 'bg-[#D6001C] text-white shadow-xs'
+                  : 'bg-white/90 text-neutral-700 hover:bg-white border border-[#E2DBD0]'
+              }`}
+            >
+              <CalendarDays className="w-3.5 h-3.5" />
+              <span>Cronograma Semanal</span>
+            </button>
           </nav>
         </div>
       </div>
@@ -96,13 +110,8 @@ const MainAppContent: React.FC = () => {
       <main className="max-w-4xl mx-auto w-full px-4 pb-12 flex-1">
         {activeTab === 'CARGA' && (
           <div className="space-y-4">
-            {/* 1. Recuadros superiores de horas y captadores */}
             <DayTopControls />
-
-            {/* 2. Formulario de registro ágil */}
             <PartnerRegistrationForm />
-
-            {/* 3. SOLO los socios del día actual (limpio y sin sobrecargar la pantalla inicial) */}
             <TodayPartnersList />
           </div>
         )}
@@ -116,7 +125,6 @@ const MainAppContent: React.FC = () => {
 
         {activeTab === 'SOCIOS' && (
           <div>
-            {/* Aquí sí está el listado histórico completo con el selector de calendario */}
             <PartnersListWithCalendar />
           </div>
         )}
@@ -129,8 +137,13 @@ const MainAppContent: React.FC = () => {
 
         {activeTab === 'SEMANAL' && (
           <div>
-            {/* Planilla semanal automatizada con los datos de las fotos */}
             <WeeklyClosingSection />
+          </div>
+        )}
+
+        {activeTab === 'CRONOGRAMA' && (
+          <div>
+            <WeeklyScheduleSection />
           </div>
         )}
       </main>

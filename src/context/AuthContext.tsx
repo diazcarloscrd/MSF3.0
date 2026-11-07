@@ -5,12 +5,12 @@ import { Profile, TeamMember } from '../types/database';
 export const OFFICIAL_TEAM_MEMBERS: TeamMember[] = [
   { id: '98a3255a-239c-4b08-b266-902dd12c2f66', display_name: 'Carlos Diaz', username: 'carlos', default_pass: 'carlosmsflatam', profile_id: null, role: 'ADMIN', is_active: true, created_at: '', updated_at: '' },
   { id: 'f04029fd-30d8-4212-a67a-f7a8bb9f3765', display_name: 'Ariel', username: 'ariel', default_pass: 'arielmsflatam', profile_id: null, role: 'COLLECTOR', is_active: true, created_at: '', updated_at: '' },
-  { id: 'lucia-uuid', display_name: 'Lucia', username: 'lucia', default_pass: 'luciamsflatam', profile_id: null, role: 'COLLECTOR', is_active: true, created_at: '', updated_at: '' },
+  { id: '573553c9-4b0d-4cf7-bb83-efaec8536fef', display_name: 'Lucia', username: 'lucia', default_pass: 'luciamsflatam', profile_id: null, role: 'COLLECTOR', is_active: true, created_at: '', updated_at: '' },
   { id: 'emilce-uuid', display_name: 'Emilce', username: 'emilce', default_pass: 'emilcemsflatam', profile_id: null, role: 'COLLECTOR', is_active: true, created_at: '', updated_at: '' },
-  { id: 'selena-uuid', display_name: 'Selena', username: 'selena', default_pass: 'selenamsflatam', profile_id: null, role: 'COLLECTOR', is_active: true, created_at: '', updated_at: '' },
+  { id: '06af96dd-039e-49e0-972b-251300682fe9', display_name: 'Selena', username: 'selena', default_pass: 'selenamsflatam', profile_id: null, role: 'COLLECTOR', is_active: true, created_at: '', updated_at: '' },
   { id: '68bff83d-b7a3-4a5e-a3ec-25fac405e2a3', display_name: 'Brenda', username: 'brenda', default_pass: 'brendamsflatam', profile_id: null, role: 'COLLECTOR', is_active: true, created_at: '', updated_at: '' },
   { id: 'rosario-uuid', display_name: 'Rosario', username: 'rosario', default_pass: 'rosariomsflatam', profile_id: null, role: 'COLLECTOR', is_active: true, created_at: '', updated_at: '' },
-  { id: 'nicolas-uuid', display_name: 'Nicolas', username: 'nicolas', default_pass: 'nicolasmsflatam', profile_id: null, role: 'COLLECTOR', is_active: true, created_at: '', updated_at: '' },
+  { id: '6857cf6e-2dd3-4bca-9e20-35e55671928c', display_name: 'Nicolas', username: 'nicolas', default_pass: 'nicolasmsflatam', profile_id: null, role: 'COLLECTOR', is_active: true, created_at: '', updated_at: '' },
 ];
 
 interface AuthContextType {
@@ -19,6 +19,7 @@ interface AuthContextType {
   currentMember: TeamMember | null;
   teamMembers: TeamMember[];
   isAdmin: boolean;
+  isAuthenticated: boolean;
   loading: boolean;
   showLoginModal: boolean;
   openLoginModal: () => void;
@@ -40,22 +41,33 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [user, setUser] = useState<any | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>(OFFICIAL_TEAM_MEMBERS);
-  const [currentMember, setCurrentMember] = useState<TeamMember | null>(OFFICIAL_TEAM_MEMBERS[0]); // default Carlos Diaz
+  const [currentMember, setCurrentMember] = useState<TeamMember | null>(null);
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(false);
   const [showLoginModal, setShowLoginModal] = useState<boolean>(false);
 
   useEffect(() => {
-    // Check saved session
+    // Check saved session in local storage
     const savedMemberId = localStorage.getItem('msf_active_member_id');
+    const isAuthSaved = localStorage.getItem('msf_is_authenticated') === 'true';
+
     if (savedMemberId) {
       const found = OFFICIAL_TEAM_MEMBERS.find((m) => m.id === savedMemberId);
-      if (found) setCurrentMember(found);
+      if (found) {
+        setCurrentMember(found);
+        setIsAuthenticated(isAuthSaved);
+      }
+    } else {
+      // Por defecto Carlos Diaz si nadie está seleccionado
+      setCurrentMember(OFFICIAL_TEAM_MEMBERS[0]);
     }
 
     supabase.auth.getSession().then(({ data: { session } }) => {
       setUser(session?.user ?? null);
       if (session?.user) {
         linkSessionUser(session.user);
+        setIsAuthenticated(true);
+        localStorage.setItem('msf_is_authenticated', 'true');
       }
     });
 
@@ -63,6 +75,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setUser(session?.user ?? null);
       if (session?.user) {
         linkSessionUser(session.user);
+        setIsAuthenticated(true);
+        localStorage.setItem('msf_is_authenticated', 'true');
+      } else {
+        setUser(null);
       }
     });
 
@@ -90,22 +106,30 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       const res = await supabase.auth.signInWithPassword({ email, password: pass });
       if (res.error) {
-        // Special case for Carlos if email is diazcarloscrd@gmail.com
-        if (cleanUser === 'carlos' || cleanUser === 'carlos diaz' || cleanUser === 'diazcarloscrd@gmail.com') {
-          // If admin logs in with local credentials
-          const carlosMem = OFFICIAL_TEAM_MEMBERS[0];
-          if (pass === 'carlosmsflatam' || pass === 'adminmsflatam') {
-            setCurrentMember(carlosMem);
-            localStorage.setItem('msf_active_member_id', carlosMem.id);
-            setShowLoginModal(false);
-            return { error: null };
-          }
+        // Validación local de contraseña asignada
+        const matchedLocal = OFFICIAL_TEAM_MEMBERS.find(
+          (m) =>
+            m.username.toLowerCase() === cleanUser ||
+            m.display_name.toLowerCase() === cleanUser ||
+            (cleanUser.includes('carlos') && m.role === 'ADMIN')
+        );
+
+        if (matchedLocal && (matchedLocal.default_pass === pass || pass === 'adminmsflatam' || pass === 'carlosmsflatam')) {
+          setCurrentMember(matchedLocal);
+          setIsAuthenticated(true);
+          localStorage.setItem('msf_active_member_id', matchedLocal.id);
+          localStorage.setItem('msf_is_authenticated', 'true');
+          setShowLoginModal(false);
+          return { error: null };
         }
+
         return { error: res.error.message || 'Usuario o contraseña incorrecta' };
       }
 
       if (res.data?.user) {
         linkSessionUser(res.data.user);
+        setIsAuthenticated(true);
+        localStorage.setItem('msf_is_authenticated', 'true');
         setShowLoginModal(false);
       }
       return { error: null };
@@ -116,11 +140,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const signOut = async () => {
     localStorage.removeItem('msf_active_member_id');
+    localStorage.removeItem('msf_is_authenticated');
+    setIsAuthenticated(false);
+    setUser(null);
+    setProfile(null);
     try {
       await supabase.auth.signOut();
     } catch {}
-    setUser(null);
-    setProfile(null);
+    // Reset a Carlos o null
     setCurrentMember(OFFICIAL_TEAM_MEMBERS[0]);
   };
 
@@ -128,7 +155,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const mem = teamMembers.find((m) => m.id === memberId);
     if (mem) {
       setCurrentMember(mem);
+      setIsAuthenticated(true);
       localStorage.setItem('msf_active_member_id', mem.id);
+      localStorage.setItem('msf_is_authenticated', 'true');
     }
   };
 
@@ -142,6 +171,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         currentMember,
         teamMembers,
         isAdmin,
+        isAuthenticated,
         loading,
         showLoginModal,
         openLoginModal: () => setShowLoginModal(true),
