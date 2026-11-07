@@ -42,7 +42,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [profile, setProfile] = useState<Profile | null>(null);
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>(OFFICIAL_TEAM_MEMBERS);
   const [currentMember, setCurrentMember] = useState<TeamMember | null>(null);
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => localStorage.getItem('msf_is_authenticated') === 'true');
+  const [isAdmin, setIsAdmin] = useState<boolean>(() => localStorage.getItem('msf_is_admin_session') === 'true');
   const [loading, setLoading] = useState<boolean>(false);
   const [showLoginModal, setShowLoginModal] = useState<boolean>(false);
 
@@ -50,16 +51,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // Check saved session in local storage
     const savedMemberId = localStorage.getItem('msf_active_member_id');
     const isAuthSaved = localStorage.getItem('msf_is_authenticated') === 'true';
+    const isAdminSaved = localStorage.getItem('msf_is_admin_session') === 'true';
 
     if (savedMemberId) {
       const found = OFFICIAL_TEAM_MEMBERS.find((m) => m.id === savedMemberId);
       if (found) {
         setCurrentMember(found);
         setIsAuthenticated(isAuthSaved);
+        setIsAdmin(isAdminSaved);
       }
     } else {
-      // Por defecto Carlos Diaz si nadie está seleccionado
+      // Si nadie inició sesión todavía
       setCurrentMember(OFFICIAL_TEAM_MEMBERS[0]);
+      setIsAuthenticated(false);
+      setIsAdmin(false);
     }
 
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -96,6 +101,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (matched) {
       setCurrentMember(matched);
       localStorage.setItem('msf_active_member_id', matched.id);
+      const isCarlos = matched.role === 'ADMIN' || matched.username === 'carlos';
+      setIsAdmin(isCarlos);
+      localStorage.setItem('msf_is_admin_session', isCarlos ? 'true' : 'false');
     }
   };
 
@@ -117,8 +125,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (matchedLocal && (matchedLocal.default_pass === pass || pass === 'adminmsflatam' || pass === 'carlosmsflatam')) {
           setCurrentMember(matchedLocal);
           setIsAuthenticated(true);
+          const isCarlos = matchedLocal.role === 'ADMIN' || matchedLocal.username === 'carlos';
+          setIsAdmin(isCarlos);
           localStorage.setItem('msf_active_member_id', matchedLocal.id);
           localStorage.setItem('msf_is_authenticated', 'true');
+          localStorage.setItem('msf_is_admin_session', isCarlos ? 'true' : 'false');
           setShowLoginModal(false);
           return { error: null };
         }
@@ -141,27 +152,29 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const signOut = async () => {
     localStorage.removeItem('msf_active_member_id');
     localStorage.removeItem('msf_is_authenticated');
+    localStorage.removeItem('msf_is_admin_session');
     setIsAuthenticated(false);
+    setIsAdmin(false);
     setUser(null);
     setProfile(null);
     try {
       await supabase.auth.signOut();
     } catch {}
-    // Reset a Carlos o null
+    // Reset
     setCurrentMember(OFFICIAL_TEAM_MEMBERS[0]);
   };
 
   const simulateSelectMember = (memberId: string) => {
+    // Solo permitido si quien inició sesión es Administrador
+    if (!isAdmin) return;
+
     const mem = teamMembers.find((m) => m.id === memberId);
     if (mem) {
       setCurrentMember(mem);
-      setIsAuthenticated(true);
       localStorage.setItem('msf_active_member_id', mem.id);
-      localStorage.setItem('msf_is_authenticated', 'true');
+      // Mantiene isAdmin en true para que Carlos no pierda su menú
     }
   };
-
-  const isAdmin = Boolean(currentMember?.role === 'ADMIN' || currentMember?.display_name.toLowerCase().includes('carlos'));
 
   return (
     <AuthContext.Provider

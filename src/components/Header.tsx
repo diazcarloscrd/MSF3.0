@@ -71,15 +71,15 @@ export const Header: React.FC = () => {
               </span>
             </div>
 
-            {/* MENÚ ADMINISTRADOR PARA CAMBIAR FÁCILMENTE DE CAPTADOR */}
-            {isAdmin && (
+            {/* MENÚ ADMINISTRADOR EXCLUSIVO: SOLO VISIBLE SI CARLOS (ADMIN) INICIÓ SESIÓN */}
+            {isAuthenticated && isAdmin && (
               <div className="flex items-center bg-white rounded-xl px-2 py-1 border border-[#E2DBD0] shadow-xs">
                 <Shield className="w-3.5 h-3.5 text-[#D6001C] mr-1" />
                 <select
                   value={currentMember?.id || ''}
                   onChange={(e) => simulateSelectMember(e.target.value)}
                   className="text-xs font-black bg-transparent text-neutral-900 pr-1 py-0.5 focus:outline-none cursor-pointer max-w-[120px] sm:max-w-none"
-                  title="Cambio rápido de captador (Modo Administrador)"
+                  title="Cambio rápido de captador (Exclusivo Administrador)"
                 >
                   {teamMembers.map((member) => (
                     <option key={member.id} value={member.id}>

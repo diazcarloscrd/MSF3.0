@@ -118,20 +118,51 @@ export const DayTopControls: React.FC = () => {
                 </button>
               </div>
               <div className="flex items-center gap-1.5 flex-wrap pt-1 border-t border-neutral-100">
-                {[0, 2, 2.5, 3, 4].map((q) => (
-                  <button
-                    key={q}
-                    type="button"
-                    onClick={() => {
-                      setHoursVal(q.toString());
-                      updateMyHours(q);
-                      setIsEditingHours(false);
-                    }}
-                    className="px-2 py-0.5 text-[11px] font-bold rounded-lg bg-[#F7F3EE] hover:bg-red-50 hover:text-[#D6001C] text-neutral-700"
-                  >
-                    {q}h
-                  </button>
-                ))}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setHoursVal('4');
+                    updateMyHours(4);
+                    setIsEditingHours(false);
+                  }}
+                  className="px-2.5 py-1 text-[11px] font-black rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 transition-colors cursor-pointer"
+                >
+                  4h (Jornada)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setHoursVal('3');
+                    updateMyHours(3);
+                    setIsEditingHours(false);
+                  }}
+                  className="px-2 py-1 text-[11px] font-bold rounded-lg bg-[#F7F3EE] hover:bg-neutral-200 text-neutral-700 transition-colors cursor-pointer"
+                >
+                  3h
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setHoursVal('2');
+                    updateMyHours(2);
+                    setIsEditingHours(false);
+                  }}
+                  className="px-2 py-1 text-[11px] font-bold rounded-lg bg-[#F7F3EE] hover:bg-neutral-200 text-neutral-700 transition-colors cursor-pointer"
+                >
+                  2h
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setHoursVal('0');
+                    updateMyHours(0);
+                    setIsEditingHours(false);
+                  }}
+                  className="px-2.5 py-1 text-[11px] font-black rounded-lg bg-neutral-100 hover:bg-amber-50 hover:text-amber-800 text-neutral-600 border border-neutral-300 transition-colors cursor-pointer"
+                  title="Marcar franco rotativo o día no trabajado"
+                >
+                  0h (Franco)
+                </button>
               </div>
             </div>
           ) : (
@@ -149,7 +180,7 @@ export const DayTopControls: React.FC = () => {
                   myHours > 0 ? 'bg-emerald-100 text-emerald-800' : 'bg-neutral-100 text-neutral-600'
                 }`}
               >
-                {myHours > 0 ? 'Activo' : 'Inicia en 0'}
+                {myHours > 0 ? `${myHours}h activa` : '0h (Franco / Sin turno)'}
               </span>
             </div>
           )}

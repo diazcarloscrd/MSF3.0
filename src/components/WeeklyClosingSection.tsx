@@ -29,7 +29,7 @@ interface DayBreakdown {
 const DAY_NAMES = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
 
 export const WeeklyClosingSection: React.FC = () => {
-  const { teamMembers, currentMember } = useAuth();
+  const { teamMembers, currentMember, isAdmin } = useAuth();
   const { weeklyReports, saveWeeklyReport } = useWorkDay();
 
   // Cálculo exacto ISO-8601 de semana del año
@@ -339,20 +339,29 @@ export const WeeklyClosingSection: React.FC = () => {
             </select>
           </div>
 
-          <div className="flex items-center gap-1.5 bg-[#F7F3EE] p-1.5 rounded-xl border border-[#E2DBD0]">
-            <UserCheck className="w-4 h-4 text-neutral-500 ml-1" />
-            <select
-              value={targetMember?.id || ''}
-              onChange={(e) => setSelectedMemberId(e.target.value)}
-              className="text-xs font-black bg-white border border-[#E2DBD0] rounded-lg px-2.5 py-1 text-neutral-900 focus:outline-none cursor-pointer"
-            >
-              {activeMembers.map((m) => (
-                <option key={m.id} value={m.id}>
-                  {m.display_name}
-                </option>
-              ))}
-            </select>
-          </div>
+          {/* SELECTOR DE CAPTADOR: EXCLUSIVO DE ADMIN (CARLOS) */}
+          {isAdmin ? (
+            <div className="flex items-center gap-1.5 bg-[#F7F3EE] p-1.5 rounded-xl border border-[#E2DBD0]">
+              <UserCheck className="w-4 h-4 text-[#D6001C] ml-1" />
+              <select
+                value={targetMember?.id || ''}
+                onChange={(e) => setSelectedMemberId(e.target.value)}
+                className="text-xs font-black bg-white border border-[#E2DBD0] rounded-lg px-2.5 py-1 text-neutral-900 focus:outline-none cursor-pointer"
+                title="Seleccionar captador para auditar planilla (Exclusivo Administrador)"
+              >
+                {activeMembers.map((m) => (
+                  <option key={m.id} value={m.id}>
+                    {m.display_name} {m.role === 'ADMIN' ? '(ADMIN)' : ''}
+                  </option>
+                ))}
+              </select>
+            </div>
+          ) : (
+            <div className="flex items-center gap-1.5 bg-[#F7F3EE] px-3 py-1.5 rounded-xl border border-[#E2DBD0]">
+              <UserCheck className="w-4 h-4 text-[#D6001C]" />
+              <span className="text-xs font-black text-neutral-900">{targetMember?.display_name}</span>
+            </div>
+          )}
         </div>
       </div>
 
@@ -391,7 +400,16 @@ export const WeeklyClosingSection: React.FC = () => {
             <tbody className="divide-y divide-[#E2DBD0]/60 bg-white">
               {dailyBreakdown.map((b) => (
                 <tr key={b.dateStr} className="hover:bg-[#F7F3EE]/40 transition-colors">
-                  <td className="py-2.5 px-2.5 font-bold text-neutral-900">{b.dayName}</td>
+                  <td className="py-2.5 px-2.5 font-bold text-neutral-900">
+                    <div className="flex items-center gap-1.5">
+                      <span>{b.dayName}</span>
+                      {b.dayName.toLowerCase().includes('sábado') && (
+                        <span className="text-[9px] font-black px-1.5 py-0.5 rounded bg-amber-100 text-amber-800 border border-amber-200">
+                          Rotativo (2 pers.)
+                        </span>
+                      )}
+                    </div>
+                  </td>
                   <td className="py-2.5 px-2.5 text-center font-bold">
                     {b.partnersCount > 0 ? (
                       <span className="inline-block px-2 py-0.5 rounded-md bg-neutral-100 text-neutral-800">
@@ -408,20 +426,43 @@ export const WeeklyClosingSection: React.FC = () => {
                     {formatPesos(b.amount)}
                   </td>
                   <td className="py-2.5 px-2.5 text-center">
-                    <div className="inline-flex items-center gap-1.5">
-                      <input
-                        type="number"
-                        step="0.5"
-                        min="0"
-                        max="24"
-                        value={b.hours || ''}
-                        placeholder="0"
-                        onChange={(e) =>
-                          handleUpdateDayHours(b.dateStr, parseFloat(e.target.value) || 0)
-                        }
-                        className="w-14 text-center font-black text-neutral-900 bg-[#F7F3EE] border border-[#E2DBD0] rounded-lg py-1 px-1 focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#D6001C]"
-                      />
-                      <span className="text-[10px] font-bold text-neutral-400">hs</span>
+                    <div className="inline-flex items-center justify-center gap-1.5 flex-wrap">
+                      <div className="inline-flex items-center gap-1">
+                        <input
+                          type="number"
+                          step="0.5"
+                          min="0"
+                          max="24"
+                          value={b.hours || ''}
+                          placeholder="0"
+                          onChange={(e) =>
+                            handleUpdateDayHours(b.dateStr, parseFloat(e.target.value) || 0)
+                          }
+                          className="w-14 text-center font-black text-neutral-900 bg-[#F7F3EE] border border-[#E2DBD0] rounded-lg py-1 px-1 focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#D6001C]"
+                        />
+                        <span className="text-[10px] font-bold text-neutral-400">hs</span>
+                      </div>
+
+                      {/* Botones de acción rápida: 4h o Franco (0h) */}
+                      {b.hours === 0 ? (
+                        <button
+                          type="button"
+                          onClick={() => handleUpdateDayHours(b.dateStr, 4)}
+                          className="px-1.5 py-0.5 text-[10px] font-bold rounded bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 cursor-pointer"
+                          title="Cargar jornada de 4 horas"
+                        >
+                          +4h
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => handleUpdateDayHours(b.dateStr, 0)}
+                          className="px-1.5 py-0.5 text-[10px] font-bold rounded bg-neutral-100 hover:bg-amber-50 hover:text-amber-800 text-neutral-600 border border-neutral-200 cursor-pointer"
+                          title="Marcar franco rotativo (0 horas)"
+                        >
+                          Franco (0h)
+                        </button>
+                      )}
                     </div>
                   </td>
                 </tr>
@@ -659,13 +700,17 @@ export const WeeklyClosingSection: React.FC = () => {
                       {rep && rep.average_amount !== null ? formatPesos(rep.average_amount) : '-'}
                     </td>
                     <td className="py-2.5 px-2 text-center">
-                      <button
-                        type="button"
-                        onClick={() => setSelectedMemberId(m.id)}
-                        className="text-[11px] font-bold text-neutral-600 hover:text-[#D6001C] underline cursor-pointer"
-                      >
-                        Ver / Editar
-                      </button>
+                      {isAdmin || m.id === currentMember?.id ? (
+                        <button
+                          type="button"
+                          onClick={() => setSelectedMemberId(m.id)}
+                          className="text-[11px] font-bold text-neutral-600 hover:text-[#D6001C] underline cursor-pointer"
+                        >
+                          Ver / Editar
+                        </button>
+                      ) : (
+                        <span className="text-[11px] text-neutral-400">—</span>
+                      )}
                     </td>
                   </tr>
                 );
