@@ -4,6 +4,7 @@ import { WorkDayProvider } from './context/WorkDayContext';
 import { Header } from './components/Header';
 import { DayTopControls } from './components/DayTopControls';
 import { PartnerRegistrationForm } from './components/PartnerRegistrationForm';
+import { TodayPartnersList } from './components/TodayPartnersList';
 import { StatsDashboard } from './components/StatsDashboard';
 import { IndividualPerformance } from './components/IndividualPerformance';
 import { PartnersListWithCalendar } from './components/PartnersListWithCalendar';
@@ -95,14 +96,14 @@ const MainAppContent: React.FC = () => {
       <main className="max-w-4xl mx-auto w-full px-4 pb-12 flex-1">
         {activeTab === 'CARGA' && (
           <div className="space-y-4">
-            {/* 1. Cantidad de captadores y horas arriba en dos recuadros lado a lado */}
+            {/* 1. Recuadros superiores de horas y captadores */}
             <DayTopControls />
 
-            {/* 2. Formulario de socios responsive optimizado */}
+            {/* 2. Formulario de registro ágil */}
             <PartnerRegistrationForm />
 
-            {/* 3. Historial de socios en la parte inferior */}
-            <PartnersListWithCalendar />
+            {/* 3. SOLO los socios del día actual (limpio y sin sobrecargar la pantalla inicial) */}
+            <TodayPartnersList />
           </div>
         )}
 
@@ -115,6 +116,7 @@ const MainAppContent: React.FC = () => {
 
         {activeTab === 'SOCIOS' && (
           <div>
+            {/* Aquí sí está el listado histórico completo con el selector de calendario */}
             <PartnersListWithCalendar />
           </div>
         )}
@@ -127,6 +129,7 @@ const MainAppContent: React.FC = () => {
 
         {activeTab === 'SEMANAL' && (
           <div>
+            {/* Planilla semanal automatizada con los datos de las fotos */}
             <WeeklyClosingSection />
           </div>
         )}
