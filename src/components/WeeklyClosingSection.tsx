@@ -46,7 +46,10 @@ export const WeeklyClosingSection: React.FC = () => {
   };
 
   const currentYear = new Date().getFullYear();
-  const [selectedWeek, setSelectedWeek] = useState<number>(getISOWeek(new Date()));
+  const MIN_START_WEEK = 46; // La planilla semanal comienza oficialmente desde la Semana 46 (Lunes 09/11)
+  const [selectedWeek, setSelectedWeek] = useState<number>(() =>
+    Math.max(MIN_START_WEEK, getISOWeek(new Date()))
+  );
   const [selectedMemberId, setSelectedMemberId] = useState<string>(currentMember?.id || '');
   const [savedSuccess, setSavedSuccess] = useState<string | null>(null);
   const [isAutoCalculating, setIsAutoCalculating] = useState<boolean>(false);
@@ -129,9 +132,8 @@ export const WeeklyClosingSection: React.FC = () => {
           .lte('operational_date', weekDateRange.endStr);
 
         const memberFirstName = member.display_name.toLowerCase().split(' ')[0];
-        const isCarlos = memberFirstName === 'carlos';
 
-        // 2. Construir desglose diario
+        // 2. Construir desglose diario (a partir de Semana 46)
         const breakdown: DayBreakdown[] = weekDays.map((wDay) => {
           const sociosOnDay = (weekSocios || []).filter((s) => {
             const matchesDate = s.operational_date === wDay.dateStr;
@@ -145,7 +147,7 @@ export const WeeklyClosingSection: React.FC = () => {
           const amtOnDay = Number(sociosOnDay.reduce((acc, s) => acc + Number(s.amount || 0), 0).toFixed(2));
           const countOnDay = sociosOnDay.length;
 
-          // Leer horas guardadas en localStorage
+          // Leer horas guardadas en localStorage por el captador en cada jornada
           let hrsOnDay = 0;
           const shiftKey = `msf_shifts_${wDay.dateStr}`;
           const savedShifts = localStorage.getItem(shiftKey);
@@ -159,15 +161,6 @@ export const WeeklyClosingSection: React.FC = () => {
               );
               if (sh) hrsOnDay = Number(sh.hours_worked || 0);
             } catch {}
-          }
-
-          // Si es la Semana 45 y Carlos Díaz (Foto oficial 1), predeterminar las horas reales exactas
-          if (hrsOnDay === 0 && isCarlos && selectedWeek === 45) {
-            if (wDay.dateStr === '2026-11-02') hrsOnDay = 4;
-            else if (wDay.dateStr === '2026-11-03') hrsOnDay = 4;
-            else if (wDay.dateStr === '2026-11-04') hrsOnDay = 4;
-            else if (wDay.dateStr === '2026-11-05') hrsOnDay = 3; // Plaza Rivadavia (3 horas trabajadas, 0 socios)
-            else if (wDay.dateStr === '2026-11-06') hrsOnDay = 4; // Shopping
           }
 
           return {
@@ -322,7 +315,7 @@ export const WeeklyClosingSection: React.FC = () => {
           </p>
         </div>
 
-        {/* SELECTOR DE SEMANA Y CAPTADOR */}
+        {/* SELECTOR DE SEMANA (DESDE SEMANA 46) Y CAPTADOR */}
         <div className="flex items-center gap-2 flex-wrap">
           <div className="flex items-center gap-1.5 bg-[#F7F3EE] p-1.5 rounded-xl border border-[#E2DBD0]">
             <Calendar className="w-4 h-4 text-neutral-500 ml-1" />
@@ -331,7 +324,7 @@ export const WeeklyClosingSection: React.FC = () => {
               onChange={(e) => setSelectedWeek(parseInt(e.target.value, 10))}
               className="text-xs font-black bg-white border border-[#E2DBD0] rounded-lg px-2.5 py-1 text-neutral-900 focus:outline-none cursor-pointer"
             >
-              {Array.from({ length: 52 }, (_, i) => i + 1).map((w) => (
+              {Array.from({ length: 52 - MIN_START_WEEK + 1 }, (_, i) => MIN_START_WEEK + i).map((w) => (
                 <option key={w} value={w}>
                   Semana {w} ({currentYear})
                 </option>
@@ -363,6 +356,15 @@ export const WeeklyClosingSection: React.FC = () => {
             </div>
           )}
         </div>
+      </div>
+
+      {/* AVISO CLARO DE INICIO DESDE SEMANA 46 */}
+      <div className="mb-4 p-3 bg-[#F7F3EE] border border-[#E2DBD0] rounded-xl flex items-center gap-2.5 text-xs text-neutral-700">
+        <Calendar className="w-4 h-4 text-[#D6001C] flex-shrink-0" />
+        <p className="font-medium">
+          <strong className="font-black text-neutral-900">Planilla Semanal activa desde la Semana 46 (Lunes 09/11):</strong>{' '}
+          A medida que registres tus socios y tus horas trabajadas cada día, esta planilla calculará tu promedio semanal automáticamente sin errores ni datos de semanas anteriores.
+        </p>
       </div>
 
       {savedSuccess && (
