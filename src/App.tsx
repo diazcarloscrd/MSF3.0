@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { AuthProvider, useAuth } from './context/AuthContext';
-import { WorkDayProvider } from './context/WorkDayContext';
+import { WorkDayProvider, useWorkDay } from './context/WorkDayContext';
 import { Header } from './components/Header';
 import { LoginPage } from './components/LoginPage';
 import { DayTopControls } from './components/DayTopControls';
@@ -11,16 +11,20 @@ import { IndividualPerformance } from './components/IndividualPerformance';
 import { PartnersListWithCalendar } from './components/PartnersListWithCalendar';
 import { DayClosureSection } from './components/DayClosureSection';
 import { WeeklyClosingSection } from './components/WeeklyClosingSection';
+import { formatBuenosAiresDate } from './lib/stats';
 import {
   LayoutDashboard,
   UserPlus,
   ListOrdered,
   FileSpreadsheet,
   CalendarCheck,
+  History,
+  CheckCircle2,
 } from 'lucide-react';
 
 const MainAppContent: React.FC = () => {
-  const { isAuthenticated, currentMember } = useAuth();
+  const { isAuthenticated, currentMember, loading: authLoading } = useAuth();
+  const { isViewingHistory, selectedDate, exitHistoricalView, newDayNotice } = useWorkDay();
   const [activeTab, setActiveTab] = useState<'CARGA' | 'DASHBOARD' | 'SOCIOS' | 'CIERRE' | 'SEMANAL'>('CARGA');
 
   // Asegurar que al entrar o salir de la sesión se restablezca el zoom y el scroll en móviles
@@ -46,7 +50,25 @@ const MainAppContent: React.FC = () => {
     window.scrollTo(0, 0);
   }, [isAuthenticated]);
 
-  // Si el usuario no inició sesión, lo redirigimos directamente a la pantalla de Login obligatoria
+  // Garantizar que la pestaña "Carga & Horas" siempre opere sobre la jornada activa de hoy
+  useEffect(() => {
+    if (activeTab === 'CARGA' && isViewingHistory) {
+      exitHistoricalView();
+    }
+  }, [activeTab, isViewingHistory, exitHistoricalView]);
+
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-[#F7F3EE] flex flex-col items-center justify-center p-4">
+        <div className="w-12 h-12 rounded-2xl bg-[#D6001C] text-white font-black text-base tracking-tighter flex items-center justify-center shadow-md mb-3 animate-pulse">
+          MSF
+        </div>
+        <p className="text-xs font-bold text-neutral-500">Verificando sesión...</p>
+      </div>
+    );
+  }
+
+  // Si el usuario no inició sesión con una sesión válida de Supabase, obligar LoginPage
   if (!isAuthenticated || !currentMember) {
     return <LoginPage />;
   }
@@ -61,7 +83,10 @@ const MainAppContent: React.FC = () => {
         <div className="max-w-4xl mx-auto px-3 sm:px-4">
           <nav className="flex items-center gap-1.5 sm:gap-2 py-2 overflow-x-auto no-scrollbar">
             <button
-              onClick={() => setActiveTab('CARGA')}
+              onClick={() => {
+                exitHistoricalView();
+                setActiveTab('CARGA');
+              }}
               className={`flex items-center gap-1.5 px-3 py-1.5 sm:py-2 rounded-xl text-[11px] sm:text-xs font-black transition-all shrink-0 cursor-pointer ${
                 activeTab === 'CARGA'
                   ? 'bg-[#D6001C] text-white shadow-xs'
@@ -125,6 +150,31 @@ const MainAppContent: React.FC = () => {
 
       {/* CONTENIDO PRINCIPAL */}
       <main className="max-w-4xl mx-auto w-full px-3 sm:px-4 pb-12 flex-1">
+        {newDayNotice && (
+          <div className="mb-4 p-3 bg-emerald-50 border border-emerald-300 rounded-xl flex items-center gap-2 text-xs font-bold text-emerald-800">
+            <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+            <span>{newDayNotice}</span>
+          </div>
+        )}
+
+        {isViewingHistory && (activeTab === 'DASHBOARD' || activeTab === 'CIERRE') && (
+          <div className="mb-4 p-3 bg-amber-50 border border-amber-300 rounded-xl flex items-center justify-between gap-2 flex-wrap">
+            <div className="flex items-center gap-2 text-xs font-bold text-amber-900">
+              <History className="w-4 h-4 text-amber-700 shrink-0" />
+              <span>
+                Consultando jornada histórica del <strong>{formatBuenosAiresDate(selectedDate)}</strong>
+              </span>
+            </div>
+            <button
+              type="button"
+              onClick={exitHistoricalView}
+              className="px-3 py-1 bg-neutral-900 hover:bg-black text-white text-[11px] font-black rounded-lg cursor-pointer transition-colors"
+            >
+              Volver a Hoy
+            </button>
+          </div>
+        )}
+
         {activeTab === 'CARGA' && (
           <div className="space-y-4">
             <DayTopControls />

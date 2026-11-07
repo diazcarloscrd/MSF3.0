@@ -24,6 +24,7 @@ export const DayTopControls: React.FC = () => {
   const [collectorsVal, setCollectorsVal] = useState<string>(declared.toString());
   const [isEditingCollectors, setIsEditingCollectors] = useState<boolean>(false);
   const [isSavingCollectors, setIsSavingCollectors] = useState<boolean>(false);
+  const [controlError, setControlError] = useState<string | null>(null);
 
   // Sincronizar cuando cambie el usuario, la fecha o los datos
   useEffect(() => {
@@ -47,18 +48,28 @@ export const DayTopControls: React.FC = () => {
   const handleSaveHours = async () => {
     const num = parseFloat(hoursVal.replace(',', '.'));
     if (isNaN(num) || num < 0 || num > 24) return;
+    setControlError(null);
     setIsSavingHours(true);
-    await updateMyHours(num);
+    const { error } = await updateMyHours(num);
     setIsSavingHours(false);
+    if (error) {
+      setControlError(typeof error === 'string' ? error : 'Error al guardar horas.');
+      return;
+    }
     setIsEditingHours(false);
   };
 
   const handleSaveCollectors = async () => {
     const count = parseInt(collectorsVal, 10);
     if (isNaN(count) || count < 0) return;
+    setControlError(null);
     setIsSavingCollectors(true);
-    await updateDeclaredCollectors(count);
+    const { error } = await updateDeclaredCollectors(count);
     setIsSavingCollectors(false);
+    if (error) {
+      setControlError(typeof error === 'string' ? error : 'Error al actualizar captadores.');
+      return;
+    }
     setIsEditingCollectors(false);
   };
 
@@ -280,6 +291,12 @@ export const DayTopControls: React.FC = () => {
           )}
         </div>
       </div>
+
+      {controlError && (
+        <div className="p-2.5 rounded-xl bg-red-50 border border-red-200 text-xs font-bold text-red-700">
+          {controlError}
+        </div>
+      )}
 
       {/* AVISO DE CERO HORAS CON SOCIOS */}
       {hasZeroHoursWithPartners && (

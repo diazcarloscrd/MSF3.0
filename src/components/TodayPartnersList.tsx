@@ -10,6 +10,7 @@ export const TodayPartnersList: React.FC = () => {
   const { currentMember, isAdmin } = useAuth();
 
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
 
   // Estados de edición inline
   const [editingPartnerId, setEditingPartnerId] = useState<string | null>(null);
@@ -19,6 +20,7 @@ export const TodayPartnersList: React.FC = () => {
   const [isSavingEdit, setIsSavingEdit] = useState<boolean>(false);
 
   const startEdit = (p: Partner) => {
+    setActionError(null);
     setEditingPartnerId(p.id);
     setEditAge(p.age.toString());
     setEditAmount((p.contribution_amount || p.amount || 0).toString());
@@ -29,22 +31,32 @@ export const TodayPartnersList: React.FC = () => {
     const ageNum = parseInt(editAge, 10);
     const amountNum = parseFloat(editAmount.replace(/\./g, '').replace(',', '.'));
     if (isNaN(ageNum) || ageNum < 16 || ageNum > 99 || isNaN(amountNum) || amountNum <= 0) {
+      setActionError('Verificá que la edad esté entre 16 y 99 años y el monto sea mayor a 0.');
       return;
     }
 
+    setActionError(null);
     setIsSavingEdit(true);
-    await updatePartner(partnerId, {
+    const { error } = await updatePartner(partnerId, {
       age: ageNum,
       amount: amountNum,
       paymentType: editPaymentType,
     });
     setIsSavingEdit(false);
+    if (error) {
+      setActionError(typeof error === 'string' ? error : 'No se pudo actualizar el socio.');
+      return;
+    }
     setEditingPartnerId(null);
   };
 
   const handleDelete = async (partnerId: string) => {
-    await deletePartner(partnerId);
+    setActionError(null);
+    const { error } = await deletePartner(partnerId);
     setConfirmDeleteId(null);
+    if (error) {
+      setActionError(typeof error === 'string' ? error : 'No se pudo eliminar el socio.');
+    }
   };
 
   const totalPoints = Number(partners.reduce((sum, p) => sum + Number(p.points || 0), 0).toFixed(2));
@@ -72,6 +84,12 @@ export const TodayPartnersList: React.FC = () => {
           </span>
         </div>
       </div>
+
+      {actionError && (
+        <div className="mb-3 p-2.5 rounded-xl bg-red-50 border border-red-200 text-xs font-bold text-red-700">
+          {actionError}
+        </div>
+      )}
 
       {partners.length === 0 ? (
         <div className="text-center py-8 border-2 border-dashed border-[#E2DBD0] rounded-xl bg-[#F7F3EE]/30">
