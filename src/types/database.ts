@@ -158,25 +158,6 @@ export interface WeeklyMemberReport {
   updated_at: string;
 }
 
-export interface ScheduleDayEntry {
-  day_of_week: 'Lunes' | 'Martes' | 'Miércoles' | 'Jueves' | 'Viernes' | 'Sábado';
-  date: string; // YYYY-MM-DD
-  is_day_off: boolean; // Si es su día de franco rotativo
-  location: string; // Ej: Colón y Drago, Shopping, Peatonal, Plaza Rivadavia
-  shift_time: string; // Ej: 10:00 a 14:00, 16:00 a 20:00
-  partner_names: string[]; // Compañeros del grupo (pareja o trío)
-}
-
-export interface MemberWeeklySchedule {
-  id: string;
-  week_number: number;
-  year: number;
-  member_id: string;
-  member_name: string;
-  days: ScheduleDayEntry[];
-  updated_at: string;
-}
-
 export const PAYMENT_METHOD_CONFIG: Record<PaymentMethodType, { label: string; points: number; badgeColor: string; description: string }> = {
   credit_card: {
     label: 'TARJETA DE CRÉDITO',

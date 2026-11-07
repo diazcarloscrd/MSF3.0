@@ -7,7 +7,6 @@ import {
   DailyClosure,
   ClosureSummaryData,
   WeeklyMemberReport,
-  MemberWeeklySchedule,
 } from '../types/database';
 import { calculateLiveDayStats } from '../lib/stats';
 import { useAuth } from './AuthContext';
@@ -39,8 +38,6 @@ interface WorkDayContextType {
   refreshData: () => Promise<void>;
   weeklyReports: WeeklyMemberReport[];
   saveWeeklyReport: (report: WeeklyMemberReport) => void;
-  weeklySchedules: MemberWeeklySchedule[];
-  saveMemberSchedule: (schedule: MemberWeeklySchedule) => void;
 }
 
 const WorkDayContext = createContext<WorkDayContextType>({} as WorkDayContextType);
@@ -50,7 +47,6 @@ const getTodayBuenosAiresDate = () => {
 };
 
 const WEEKLY_STORAGE_KEY = 'msf_weekly_reports_v1';
-const SCHEDULES_STORAGE_KEY = 'msf_weekly_schedules_v1';
 
 export const WorkDayProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { currentMember, teamMembers, isAdmin } = useAuth();
@@ -78,21 +74,16 @@ export const WorkDayProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const [loading, setLoading] = useState<boolean>(false);
   const [isConnected, setIsConnected] = useState<boolean>(true);
   const [weeklyReports, setWeeklyReports] = useState<WeeklyMemberReport[]>([]);
-  const [weeklySchedules, setWeeklySchedules] = useState<MemberWeeklySchedule[]>([]);
 
   const isViewingHistory = selectedDate !== todayStr;
   const activeWorkDay = currentWorkDay;
 
-  // Cargar reportes semanales y cronogramas desde storage
+  // Cargar reportes semanales desde storage
   useEffect(() => {
     try {
       const savedWeekly = localStorage.getItem(WEEKLY_STORAGE_KEY);
       if (savedWeekly) {
         setWeeklyReports(JSON.parse(savedWeekly));
-      }
-      const savedSchedules = localStorage.getItem(SCHEDULES_STORAGE_KEY);
-      if (savedSchedules) {
-        setWeeklySchedules(JSON.parse(savedSchedules));
       }
     } catch (e) {
       console.warn('Error reading storage', e);
@@ -115,27 +106,6 @@ export const WorkDayProvider: React.FC<{ children: React.ReactNode }> = ({ child
         localStorage.setItem(WEEKLY_STORAGE_KEY, JSON.stringify(updated));
       } catch (e) {
         console.warn('Error saving weekly report', e);
-      }
-      return updated;
-    });
-  };
-
-  const saveMemberSchedule = (schedule: MemberWeeklySchedule) => {
-    setWeeklySchedules((prev) => {
-      const idx = prev.findIndex(
-        (s) => s.week_number === schedule.week_number && s.year === schedule.year && s.member_id === schedule.member_id
-      );
-      let updated: MemberWeeklySchedule[];
-      if (idx >= 0) {
-        updated = [...prev];
-        updated[idx] = schedule;
-      } else {
-        updated = [...prev, schedule];
-      }
-      try {
-        localStorage.setItem(SCHEDULES_STORAGE_KEY, JSON.stringify(updated));
-      } catch (e) {
-        console.warn('Error saving schedule', e);
       }
       return updated;
     });
@@ -521,8 +491,6 @@ export const WorkDayProvider: React.FC<{ children: React.ReactNode }> = ({ child
         refreshData,
         weeklyReports,
         saveWeeklyReport,
-        weeklySchedules,
-        saveMemberSchedule,
       }}
     >
       {children}
