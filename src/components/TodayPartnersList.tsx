@@ -52,7 +52,7 @@ export const TodayPartnersList: React.FC = () => {
 
   return (
     <div className="bg-white rounded-2xl border border-[#E2DBD0] p-4 sm:p-5 shadow-sm mb-6">
-      <div className="flex items-center justify-between mb-3">
+      <div className="flex items-center justify-between gap-2 mb-3 flex-wrap">
         <div>
           <h3 className="text-xs font-black text-neutral-900 uppercase tracking-wider flex items-center gap-2">
             <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
@@ -63,11 +63,11 @@ export const TodayPartnersList: React.FC = () => {
           </p>
         </div>
 
-        <div className="text-right flex items-center gap-2">
-          <span className="text-xs font-black text-[#D6001C] bg-red-50 border border-red-200 px-2.5 py-1 rounded-xl">
+        <div className="text-right flex items-center gap-1.5 sm:gap-2">
+          <span className="text-[11px] sm:text-xs font-black text-[#D6001C] bg-red-50 border border-red-200 px-2 sm:px-2.5 py-1 rounded-xl">
             {totalPoints} pts
           </span>
-          <span className="text-xs font-black text-neutral-800 bg-[#F7F3EE] px-2.5 py-1 rounded-xl hidden sm:inline">
+          <span className="text-[11px] sm:text-xs font-black text-neutral-800 bg-[#F7F3EE] px-2 sm:px-2.5 py-1 rounded-xl">
             {formatPesos(totalAmount)}
           </span>
         </div>
@@ -80,7 +80,7 @@ export const TodayPartnersList: React.FC = () => {
             Todavía no se cargaron socios hoy.
           </p>
           <p className="text-[11px] text-neutral-400 mt-0.5">
-            Completá el formulario de arriba y presioná <strong>+ AGREGAR SOCIO</strong>.
+            Completá el formulario de arriba y presioná <strong>Agregar Socio</strong>.
           </p>
         </div>
       ) : (

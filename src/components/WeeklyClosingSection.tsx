@@ -375,10 +375,10 @@ export const WeeklyClosingSection: React.FC = () => {
       )}
 
       {/* 1. DESGLOSE DÍA POR DÍA DE LA SEMANA (FOTO 1 - PLANILLA DIARIA DE CONTROL) */}
-      <div className="mb-6 bg-[#F7F3EE]/40 border border-[#E2DBD0] rounded-2xl p-4">
-        <div className="flex items-center justify-between mb-3">
+      <div className="mb-6 bg-[#F7F3EE]/40 border border-[#E2DBD0] rounded-2xl p-3.5 sm:p-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5 mb-3">
           <div className="flex items-center gap-2">
-            <Clock className="w-4 h-4 text-[#D6001C]" />
+            <Clock className="w-4 h-4 text-[#D6001C] shrink-0" />
             <h4 className="text-xs font-black text-neutral-800 uppercase tracking-wider">
               REGISTRO DIARIO DE LA SEMANA: {targetMember?.display_name.toUpperCase()}
             </h4>
@@ -388,7 +388,75 @@ export const WeeklyClosingSection: React.FC = () => {
           </span>
         </div>
 
-        <div className="overflow-x-auto">
+        {/* VISTA MÓVIL COMPACTA DÍA POR DÍA */}
+        <div className="space-y-2 sm:hidden">
+          {dailyBreakdown.map((b) => (
+            <div
+              key={b.dateStr}
+              className="p-2.5 bg-white rounded-xl border border-[#E2DBD0] flex items-center justify-between gap-2"
+            >
+              <div className="min-w-0">
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <span className="text-xs font-black text-neutral-900">{b.dayName}</span>
+                  {b.dayName.toLowerCase().includes('sábado') && (
+                    <span className="text-[9px] font-black px-1.5 py-0.5 rounded bg-amber-100 text-amber-800 border border-amber-200">
+                      Rotativo
+                    </span>
+                  )}
+                </div>
+                <div className="text-[10px] text-neutral-500 mt-0.5 flex items-center gap-2">
+                  <span>Socios: <strong className="text-neutral-800">{b.partnersCount}</strong></span>
+                  <span>•</span>
+                  <span>Pts: <strong className="text-[#D6001C]">{b.points.toFixed(1)}</strong></span>
+                  <span>•</span>
+                  <span className="truncate">{formatPesos(b.amount)}</span>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-1.5 shrink-0">
+                <div className="inline-flex items-center gap-1">
+                  <input
+                    type="number"
+                    step="0.5"
+                    min="0"
+                    max="24"
+                    value={b.hours || ''}
+                    placeholder="0"
+                    onChange={(e) =>
+                      handleUpdateDayHours(b.dateStr, parseFloat(e.target.value) || 0)
+                    }
+                    className="w-12 h-8 text-xs text-center font-black text-neutral-900 bg-[#F7F3EE] border border-[#E2DBD0] rounded-lg focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#D6001C]"
+                  />
+                  <span className="text-[10px] font-bold text-neutral-400">hs</span>
+                </div>
+                {b.hours === 0 ? (
+                  <button
+                    type="button"
+                    onClick={() => handleUpdateDayHours(b.dateStr, 4)}
+                    className="px-2 py-1 text-[10px] font-black rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 cursor-pointer"
+                  >
+                    +4h
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => handleUpdateDayHours(b.dateStr, 0)}
+                    className="px-2 py-1 text-[10px] font-bold rounded-lg bg-neutral-100 text-neutral-600 border border-neutral-200 cursor-pointer"
+                  >
+                    0h
+                  </button>
+                )}
+              </div>
+            </div>
+          ))}
+          <div className="p-2.5 bg-[#F7F3EE] rounded-xl border border-[#E2DBD0] flex items-center justify-between text-xs font-black text-neutral-900">
+            <span>TOTAL SEMANA:</span>
+            <span>{final_partners} soc • {points_earned} pts • <strong className="text-[#D6001C]">{hours} hs</strong></span>
+          </div>
+        </div>
+
+        {/* VISTA TABLA PARA TABLET Y PC */}
+        <div className="hidden sm:block overflow-x-auto">
           <table className="w-full text-left text-xs min-w-[550px]">
             <thead>
               <tr className="border-b border-[#E2DBD0] text-[10px] font-black text-neutral-500 uppercase tracking-wider bg-white">
@@ -484,10 +552,10 @@ export const WeeklyClosingSection: React.FC = () => {
       </div>
 
       {/* 2. PLANILLA SEMANAL OFICIAL (FOTO 2 - CIERRE DE SEMANA) */}
-      <div className="bg-[#F7F3EE]/60 border-2 border-[#E2DBD0] rounded-2xl p-4 sm:p-5 mb-5 shadow-xs">
-        <div className="flex items-center justify-between mb-4 border-b border-[#E2DBD0] pb-3">
+      <div className="bg-[#F7F3EE]/60 border-2 border-[#E2DBD0] rounded-2xl p-4 sm:p-5 mb-5 shadow-2xs">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 mb-4 border-b border-[#E2DBD0] pb-3">
           <div className="flex items-center gap-2">
-            <span className="w-2.5 h-2.5 rounded-full bg-[#D6001C]"></span>
+            <span className="w-2.5 h-2.5 rounded-full bg-[#D6001C] shrink-0"></span>
             <span className="text-xs font-black uppercase text-neutral-800">
               PLANILLA DE CIERRE SEMANAL: {targetMember?.display_name.toUpperCase()} (SEMANA {selectedWeek})
             </span>
@@ -497,10 +565,10 @@ export const WeeklyClosingSection: React.FC = () => {
             type="button"
             onClick={() => loadWeekDataForMember(targetMember)}
             disabled={isAutoCalculating}
-            className="text-xs font-bold text-neutral-600 hover:text-[#D6001C] flex items-center gap-1 px-2.5 py-1 rounded-lg bg-white border border-[#E2DBD0] hover:bg-neutral-50 transition-colors"
+            className="text-xs font-bold text-neutral-600 hover:text-[#D6001C] flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-xl bg-white border border-[#E2DBD0] hover:bg-neutral-50 transition-colors cursor-pointer shrink-0"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${isAutoCalculating ? 'animate-spin' : ''}`} />
-            <span>Recalcular con base de datos</span>
+            <span>Recalcular datos</span>
           </button>
         </div>
 
@@ -614,7 +682,7 @@ export const WeeklyClosingSection: React.FC = () => {
         </div>
 
         {/* DINERO TOTAL RECAUDADO */}
-        <div className="bg-white p-3.5 rounded-xl border border-[#E2DBD0] flex items-center justify-between mb-4">
+        <div className="bg-white p-3.5 rounded-xl border border-[#E2DBD0] flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 mb-4">
           <div>
             <span className="text-[11px] font-black uppercase text-neutral-600 block">
               TOTAL DINERO RECAUDADO EN LA SEMANA
@@ -623,13 +691,13 @@ export const WeeklyClosingSection: React.FC = () => {
               Suma de aportes de la semana: base para el cálculo del promedio
             </span>
           </div>
-          <div className="w-36">
+          <div className="w-full sm:w-40">
             <input
               type="number"
               step="1000"
               value={formState.total_amount}
               onChange={(e) => setFormState({ ...formState, total_amount: e.target.value })}
-              className="w-full text-right text-lg font-black text-neutral-900 bg-[#F7F3EE] px-3 py-1.5 rounded-lg border border-neutral-300 focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#D6001C]"
+              className="w-full text-right text-base sm:text-lg font-black text-neutral-900 bg-[#F7F3EE] px-3 py-1.5 rounded-lg border border-neutral-300 focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#D6001C]"
             />
           </div>
         </div>
@@ -638,10 +706,10 @@ export const WeeklyClosingSection: React.FC = () => {
         <button
           type="button"
           onClick={handleSave}
-          className="w-full h-12 bg-[#D6001C] hover:bg-[#b80017] text-white font-black text-xs uppercase tracking-wider rounded-xl shadow-md transition-all flex items-center justify-center gap-2"
+          className="w-full h-11 bg-[#D6001C] hover:bg-[#b80017] text-white font-black text-xs uppercase tracking-wider rounded-xl shadow-sm transition-all flex items-center justify-center gap-2 cursor-pointer"
         >
-          <Save className="w-4 h-4" />
-          <span>GUARDAR PLANILLA SEMANAL DE {targetMember?.display_name.toUpperCase()}</span>
+          <Save className="w-4 h-4 shrink-0" />
+          <span className="truncate">GUARDAR PLANILLA DE {targetMember?.display_name.toUpperCase()}</span>
         </button>
       </div>
 

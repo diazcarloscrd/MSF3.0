@@ -261,8 +261,12 @@ export const WorkDayProvider: React.FC<{ children: React.ReactNode }> = ({ child
       return { error: 'Horas inválidas (debe ser entre 0 y 24)' };
     }
 
+    const targetMemberObj = teamMembers.find((m) => m.id === memberId);
     const updated = shifts.map((s) => {
-      if (s.team_member_id === memberId || s.team_member_name === currentMember?.display_name) {
+      if (
+        s.team_member_id === memberId ||
+        (targetMemberObj && s.team_member_name?.toLowerCase() === targetMemberObj.display_name.toLowerCase())
+      ) {
         return { ...s, hours_worked: numHours, updated_at: new Date().toISOString() };
       }
       return s;

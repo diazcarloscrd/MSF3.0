@@ -13,8 +13,8 @@ export const IndividualPerformance: React.FC = () => {
 
   if (!stats) return null;
 
-  const handleStartEdit = (memberId: string, currentHours: number) => {
-    setEditingMemberId(memberId);
+  const handleStartEdit = (memberName: string, currentHours: number) => {
+    setEditingMemberId(memberName);
     setEditHoursVal(currentHours.toString());
   };
 
@@ -27,7 +27,7 @@ export const IndividualPerformance: React.FC = () => {
   };
 
   return (
-    <div className="bg-white rounded-2xl border border-[#E2DBD0] p-4 sm:p-5 shadow-sm mb-6">
+    <div className="bg-white rounded-2xl border border-[#E2DBD0] p-4 sm:p-5 shadow-2xs mb-6">
       <div className="flex items-center justify-between mb-4">
         <div>
           <h3 className="text-xs font-black text-neutral-900 uppercase tracking-wider">
@@ -39,8 +39,127 @@ export const IndividualPerformance: React.FC = () => {
         </div>
       </div>
 
-      <div className="overflow-x-auto -mx-4 sm:-mx-5 px-4 sm:px-5">
-        <table className="w-full text-left text-xs min-w-[680px]">
+      {/* VISTA EN TARJETAS COMPACTAS PARA MÓVILES (iPhone, Samsung, Motorola) */}
+      <div className="grid grid-cols-1 gap-2.5 md:hidden">
+        {stats.team_performance.map((m) => {
+          const isMe = currentMember?.display_name.toLowerCase() === m.name.toLowerCase();
+          const isEditing = editingMemberId === m.name;
+          const matchingShift = shifts.find(
+            (s) =>
+              s.team_member?.display_name.toLowerCase() === m.name.toLowerCase() ||
+              s.team_member_name?.toLowerCase() === m.name.toLowerCase()
+          );
+          const canEditHours = isAdmin || isMe;
+
+          return (
+            <div
+              key={m.name}
+              className={`p-3 rounded-xl border transition-all ${
+                isMe
+                  ? 'border-[#D6001C]/40 bg-red-50/30'
+                  : 'border-[#E2DBD0] bg-[#F7F3EE]/50'
+              }`}
+            >
+              <div className="flex items-center justify-between gap-2 mb-2 pb-1.5 border-b border-[#E2DBD0]/60">
+                <div className="flex items-center gap-1.5">
+                  <span className="text-xs font-black text-neutral-900">{m.name}</span>
+                  {isMe && (
+                    <span className="text-[9px] font-black px-1.5 py-0.5 rounded bg-[#D6001C] text-white">
+                      TÚ
+                    </span>
+                  )}
+                </div>
+
+                {/* HORAS EDITABLES EN MÓVIL */}
+                <div className="flex items-center gap-1.5">
+                  {isEditing ? (
+                    <div className="flex items-center gap-1">
+                      <input
+                        type="number"
+                        step="0.5"
+                        min={0}
+                        max={24}
+                        value={editHoursVal}
+                        onChange={(e) => setEditHoursVal(e.target.value)}
+                        className="w-14 h-7 text-xs text-center font-bold bg-white border border-neutral-300 rounded-lg"
+                      />
+                      <button
+                        onClick={() => matchingShift && handleSaveEdit(matchingShift.team_member_id)}
+                        className="p-1 bg-emerald-600 text-white rounded-md"
+                      >
+                        <Check className="w-3 h-3" />
+                      </button>
+                      <button
+                        onClick={() => setEditingMemberId(null)}
+                        className="p-1 bg-neutral-200 text-neutral-600 rounded-md"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-1">
+                      <span
+                        className={`text-[11px] font-black px-2 py-0.5 rounded-md ${
+                          m.hours === 0
+                            ? 'bg-amber-100 text-amber-800'
+                            : 'bg-white text-neutral-800 border border-[#E2DBD0]'
+                        }`}
+                      >
+                        {m.hours}h
+                      </span>
+                      {canEditHours && matchingShift && (
+                        <button
+                          onClick={() => handleStartEdit(m.name, m.hours)}
+                          className="p-1 text-neutral-500 hover:text-[#D6001C] rounded-md bg-white border border-[#E2DBD0]"
+                          title="Editar horas"
+                        >
+                          <Edit3 className="w-3 h-3" />
+                        </button>
+                      )}
+                    </div>
+                  )}
+
+                  <span className="text-xs font-black text-[#D6001C] bg-red-50 border border-red-200 px-2 py-0.5 rounded-md">
+                    {m.points} pts
+                  </span>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-4 gap-1.5 text-center text-[11px]">
+                <div className="bg-white p-1.5 rounded-lg border border-[#E2DBD0]/60">
+                  <span className="text-[9px] text-neutral-400 font-bold block uppercase">Socios</span>
+                  <strong className="font-black text-neutral-900">{m.partners_count}</strong>
+                </div>
+                <div className="bg-white p-1.5 rounded-lg border border-[#E2DBD0]/60">
+                  <span className="text-[9px] text-neutral-400 font-bold block uppercase">Pts/Hora</span>
+                  <strong className="font-black text-[#D6001C]">{formatNumber(m.points_per_hour)}</strong>
+                </div>
+                <div className="bg-white p-1.5 rounded-lg border border-[#E2DBD0]/60">
+                  <span className="text-[9px] text-neutral-400 font-bold block uppercase">Edad Prom</span>
+                  <strong className="font-bold text-neutral-700">{m.average_age !== null ? `${m.average_age}a` : 'N/D'}</strong>
+                </div>
+                <div className="bg-white p-1.5 rounded-lg border border-[#E2DBD0]/60">
+                  <span className="text-[9px] text-neutral-400 font-bold block uppercase">Recaudado</span>
+                  <strong className="font-bold text-neutral-800 truncate block">{formatPesos(m.amount)}</strong>
+                </div>
+              </div>
+
+              <div className="mt-1.5 flex items-center justify-between text-[10px] text-neutral-500 px-0.5">
+                <span>
+                  CC: <strong>{m.credit_card_count}</strong> • DB: <strong>{m.debit_card_count}</strong> • CBU: <strong>{m.bank_cbu_count}</strong> • PRE: <strong>{m.prepaid_wallet_count}</strong>
+                </span>
+                <span>
+                  Soc/h: <strong>{formatNumber(m.partners_per_hour)}</strong>
+                </span>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* VISTA EN TABLA PARA TABLETS Y COMPUTADORAS */}
+      <div className="hidden md:block overflow-x-auto -mx-4 sm:-mx-5 px-4 sm:px-5">
+        <table className="w-full text-left text-xs min-w-[660px]">
           <thead>
             <tr className="border-b border-[#E2DBD0] text-[10px] font-black text-neutral-500 uppercase tracking-wider bg-[#F7F3EE]/60">
               <th className="py-2.5 px-2">Captador</th>
@@ -59,7 +178,9 @@ export const IndividualPerformance: React.FC = () => {
               const isMe = currentMember?.display_name.toLowerCase() === m.name.toLowerCase();
               const isEditing = editingMemberId === m.name;
               const matchingShift = shifts.find(
-                (s) => s.team_member?.display_name.toLowerCase() === m.name.toLowerCase() || s.team_member_name?.toLowerCase() === m.name.toLowerCase()
+                (s) =>
+                  s.team_member?.display_name.toLowerCase() === m.name.toLowerCase() ||
+                  s.team_member_name?.toLowerCase() === m.name.toLowerCase()
               );
               const canEditHours = isAdmin || isMe;
 
@@ -72,9 +193,7 @@ export const IndividualPerformance: React.FC = () => {
                 >
                   <td className="py-3 px-2">
                     <div className="flex items-center gap-1.5">
-                      <span className="font-black text-neutral-900">
-                        {m.name}
-                      </span>
+                      <span className="font-black text-neutral-900">{m.name}</span>
                       {isMe && (
                         <span className="text-[9px] font-black px-1.5 py-0.5 rounded bg-[#D6001C] text-white">
                           TÚ
@@ -100,13 +219,13 @@ export const IndividualPerformance: React.FC = () => {
                         />
                         <button
                           onClick={() => matchingShift && handleSaveEdit(matchingShift.team_member_id)}
-                          className="p-1 text-emerald-600 hover:text-emerald-800"
+                          className="p-1 text-emerald-600 hover:text-emerald-800 cursor-pointer"
                         >
                           <Check className="w-3.5 h-3.5" />
                         </button>
                         <button
                           onClick={() => setEditingMemberId(null)}
-                          className="p-1 text-neutral-400 hover:text-neutral-600"
+                          className="p-1 text-neutral-400 hover:text-neutral-600 cursor-pointer"
                         >
                           <X className="w-3.5 h-3.5" />
                         </button>
@@ -123,7 +242,8 @@ export const IndividualPerformance: React.FC = () => {
                         {canEditHours && matchingShift && (
                           <button
                             onClick={() => handleStartEdit(m.name, m.hours)}
-                            className="text-neutral-300 hover:text-neutral-600 p-0.5"
+                            className="text-neutral-400 hover:text-[#D6001C] p-0.5 cursor-pointer"
+                            title="Editar horas"
                           >
                             <Edit3 className="w-3 h-3" />
                           </button>
@@ -136,7 +256,6 @@ export const IndividualPerformance: React.FC = () => {
                     {m.partners_count}
                   </td>
 
-                  {/* EDAD PROMEDIO INDIVIDUAL */}
                   <td className="py-3 px-2 text-center font-bold text-neutral-700 bg-neutral-50/50">
                     {m.average_age !== null ? `${m.average_age} a` : 'N/D'}
                   </td>

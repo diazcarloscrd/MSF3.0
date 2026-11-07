@@ -41,7 +41,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [user, setUser] = useState<any | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>(OFFICIAL_TEAM_MEMBERS);
-  const [currentMember, setCurrentMember] = useState<TeamMember | null>(null);
+  const [currentMember, setCurrentMember] = useState<TeamMember | null>(() => {
+    const savedMemberId = localStorage.getItem('msf_active_member_id');
+    const isAuthSaved = localStorage.getItem('msf_is_authenticated') === 'true';
+    if (savedMemberId && isAuthSaved) {
+      return OFFICIAL_TEAM_MEMBERS.find((m) => m.id === savedMemberId) || null;
+    }
+    return null;
+  });
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => localStorage.getItem('msf_is_authenticated') === 'true');
   const [isAdmin, setIsAdmin] = useState<boolean>(() => localStorage.getItem('msf_is_admin_session') === 'true');
   const [loading, setLoading] = useState<boolean>(false);
@@ -53,16 +60,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const isAuthSaved = localStorage.getItem('msf_is_authenticated') === 'true';
     const isAdminSaved = localStorage.getItem('msf_is_admin_session') === 'true';
 
-    if (savedMemberId) {
+    if (savedMemberId && isAuthSaved) {
       const found = OFFICIAL_TEAM_MEMBERS.find((m) => m.id === savedMemberId);
       if (found) {
         setCurrentMember(found);
-        setIsAuthenticated(isAuthSaved);
+        setIsAuthenticated(true);
         setIsAdmin(isAdminSaved);
+      } else {
+        setCurrentMember(null);
+        setIsAuthenticated(false);
+        setIsAdmin(false);
       }
     } else {
-      // Si nadie inició sesión todavía
-      setCurrentMember(OFFICIAL_TEAM_MEMBERS[0]);
+      // Si nadie inició sesión todavía, obligar login explícito
+      setCurrentMember(null);
       setIsAuthenticated(false);
       setIsAdmin(false);
     }
@@ -160,8 +171,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       await supabase.auth.signOut();
     } catch {}
-    // Reset
-    setCurrentMember(OFFICIAL_TEAM_MEMBERS[0]);
+    // Reset al cerrar sesión
+    setCurrentMember(null);
   };
 
   const simulateSelectMember = (memberId: string) => {

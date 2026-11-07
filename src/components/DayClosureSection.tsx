@@ -118,10 +118,10 @@ export const DayClosureSection: React.FC = () => {
       </div>
 
       {/* BOTONES DE ACCIÓN */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 sm:gap-3">
         <button
           onClick={handleCopy}
-          className="h-12 px-4 rounded-xl border-2 border-neutral-300 hover:border-neutral-400 bg-white text-neutral-900 font-extrabold text-xs uppercase tracking-wider flex items-center justify-center gap-2 transition-all active:scale-[0.99]"
+          className="h-11 px-4 rounded-xl border border-[#E2DBD0] hover:border-neutral-400 bg-[#F7F3EE]/80 hover:bg-[#F7F3EE] text-neutral-900 font-black text-xs uppercase tracking-wider flex items-center justify-center gap-2 transition-all active:scale-[0.99] cursor-pointer"
         >
           {copied ? (
             <>
@@ -138,7 +138,7 @@ export const DayClosureSection: React.FC = () => {
 
         <button
           onClick={handleWhatsAppShare}
-          className="h-12 px-4 rounded-xl bg-[#25D366] hover:bg-[#20ba59] text-white font-extrabold text-xs uppercase tracking-wider flex items-center justify-center gap-2 shadow-sm transition-all active:scale-[0.99]"
+          className="h-11 px-4 rounded-xl bg-[#25D366] hover:bg-[#20ba59] text-white font-black text-xs uppercase tracking-wider flex items-center justify-center gap-2 shadow-xs transition-all active:scale-[0.99] cursor-pointer"
         >
           <Share2 className="w-4 h-4 stroke-[2.5]" />
           <span>Compartir por WhatsApp</span>
