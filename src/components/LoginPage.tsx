@@ -18,6 +18,11 @@ export const LoginPage: React.FC = () => {
       return;
     }
 
+    // Cerrar teclado móvil y evitar que quede zoom activo al entrar
+    if (document.activeElement instanceof HTMLElement) {
+      document.activeElement.blur();
+    }
+
     setError(null);
     setIsSubmitting(true);
     const { error: authErr } = await signInWithCredentials(username, password);
@@ -25,32 +30,18 @@ export const LoginPage: React.FC = () => {
 
     if (authErr) {
       setError(typeof authErr === 'string' ? authErr : 'Usuario o contraseña incorrectos.');
+    } else {
+      window.scrollTo(0, 0);
     }
   };
 
   return (
     <div className="min-h-screen bg-[#F7F3EE] text-neutral-900 flex flex-col justify-between p-4 sm:p-6 antialiased">
-      {/* BARRA SUPERIOR SIMPLE */}
-      <div className="max-w-md w-full mx-auto pt-2 sm:pt-6 flex items-center justify-between gap-2">
-        <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/80 border border-[#E2DBD0] shadow-xs">
-          <span className="w-2 h-2 rounded-full bg-[#D6001C] animate-pulse"></span>
-          <span className="text-[11px] font-black uppercase tracking-wider text-neutral-700">
-            Sistema F2F • Versión 3.0
-          </span>
-        </div>
-
-        <a
-          href="/instructivo.html"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full bg-white hover:bg-neutral-100 border border-[#E2DBD0] text-[11px] font-black text-[#D6001C] shadow-xs transition-all"
-        >
-          <span>📘 Instructivo de Uso</span>
-        </a>
-      </div>
+      {/* ESPACIADOR SUPERIOR PARA CENTRADO VERTICAL LIMPIO */}
+      <div className="h-2" />
 
       {/* TARJETA CENTRAL DE LOGIN */}
-      <div className="max-w-md w-full mx-auto my-auto py-6">
+      <div className="max-w-md w-full mx-auto my-auto py-4">
         <div className="bg-white rounded-3xl border border-[#E2DBD0] shadow-xl p-6 sm:p-8">
           {/* LOGO Y TÍTULO */}
           <div className="text-center mb-6">
@@ -81,7 +72,7 @@ export const LoginPage: React.FC = () => {
             </div>
           )}
 
-          {/* FORMULARIO */}
+          {/* FORMULARIO (text-base = 16px evita que iPhone/Android hagan zoom al escribir) */}
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <label className="block text-[11px] font-black text-neutral-600 uppercase tracking-wider mb-1.5">
@@ -95,7 +86,7 @@ export const LoginPage: React.FC = () => {
                   placeholder="Ej: ariel, lucia, emilce..."
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
-                  className="w-full h-11 pl-10 pr-3 text-sm font-bold text-neutral-900 bg-[#F7F3EE] border border-neutral-300 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#D6001C] transition-all"
+                  className="w-full h-12 pl-10 pr-3 text-base font-bold text-neutral-900 bg-[#F7F3EE] border border-neutral-300 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#D6001C] transition-all"
                   required
                 />
               </div>
@@ -113,13 +104,13 @@ export const LoginPage: React.FC = () => {
                   placeholder="Ingresá tu contraseña"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full h-11 pl-10 pr-10 text-sm font-bold text-neutral-900 bg-[#F7F3EE] border border-neutral-300 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#D6001C] transition-all"
+                  className="w-full h-12 pl-10 pr-10 text-base font-bold text-neutral-900 bg-[#F7F3EE] border border-neutral-300 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#D6001C] transition-all"
                   required
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-700 p-1"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-700 p-1 cursor-pointer"
                   tabIndex={-1}
                 >
                   {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}

@@ -81,7 +81,7 @@ export const IndividualPerformance: React.FC = () => {
                         max={24}
                         value={editHoursVal}
                         onChange={(e) => setEditHoursVal(e.target.value)}
-                        className="w-14 h-7 text-xs text-center font-bold bg-white border border-neutral-300 rounded-lg"
+                        className="w-16 h-8 text-base text-center font-bold bg-white border border-neutral-300 rounded-lg"
                       />
                       <button
                         onClick={() => matchingShift && handleSaveEdit(matchingShift.team_member_id)}

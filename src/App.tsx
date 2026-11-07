@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { WorkDayProvider } from './context/WorkDayContext';
 import { Header } from './components/Header';
@@ -22,6 +22,29 @@ import {
 const MainAppContent: React.FC = () => {
   const { isAuthenticated, currentMember } = useAuth();
   const [activeTab, setActiveTab] = useState<'CARGA' | 'DASHBOARD' | 'SOCIOS' | 'CIERRE' | 'SEMANAL'>('CARGA');
+
+  // Asegurar que al entrar o salir de la sesión se restablezca el zoom y el scroll en móviles
+  useEffect(() => {
+    if (document.activeElement instanceof HTMLElement) {
+      document.activeElement.blur();
+    }
+    const viewport = document.querySelector('meta[name="viewport"]');
+    if (viewport) {
+      viewport.setAttribute(
+        'content',
+        'width=device-width, initial-scale=1.0, maximum-scale=1.0'
+      );
+      const timer = setTimeout(() => {
+        viewport.setAttribute(
+          'content',
+          'width=device-width, initial-scale=1.0, maximum-scale=5.0'
+        );
+      }, 300);
+      window.scrollTo(0, 0);
+      return () => clearTimeout(timer);
+    }
+    window.scrollTo(0, 0);
+  }, [isAuthenticated]);
 
   // Si el usuario no inició sesión, lo redirigimos directamente a la pantalla de Login obligatoria
   if (!isAuthenticated || !currentMember) {

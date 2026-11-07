@@ -311,7 +311,7 @@ export const WeeklyClosingSection: React.FC = () => {
             PROMEDIO SEMANAL INDIVIDUAL
           </h3>
           <p className="text-xs text-neutral-500 font-medium mt-0.5">
-            Semana {selectedWeek} ({weekDateRange.startStr} al {weekDateRange.endStr}) • Auditoría Matemática Exacta
+            Semana {selectedWeek} ({weekDateRange.startStr} al {weekDateRange.endStr})
           </p>
         </div>
 
@@ -358,12 +358,11 @@ export const WeeklyClosingSection: React.FC = () => {
         </div>
       </div>
 
-      {/* AVISO CLARO DE INICIO DESDE SEMANA 46 */}
+      {/* LEYENDA EXPLICATIVA PARA CAPTADORES */}
       <div className="mb-4 p-3 bg-[#F7F3EE] border border-[#E2DBD0] rounded-xl flex items-center gap-2.5 text-xs text-neutral-700">
-        <Calendar className="w-4 h-4 text-[#D6001C] flex-shrink-0" />
+        <Calendar className="w-4 h-4 text-[#D6001C] shrink-0" />
         <p className="font-medium">
-          <strong className="font-black text-neutral-900">Planilla Semanal activa desde la Semana 46 (Lunes 09/11):</strong>{' '}
-          A medida que registres tus socios y tus horas trabajadas cada día, esta planilla calculará tu promedio semanal automáticamente sin errores ni datos de semanas anteriores.
+          A medida que registres tus socios y tus horas trabajadas cada día, esta planilla calculará tu promedio semanal automáticamente.
         </p>
       </div>
 
@@ -425,7 +424,7 @@ export const WeeklyClosingSection: React.FC = () => {
                     onChange={(e) =>
                       handleUpdateDayHours(b.dateStr, parseFloat(e.target.value) || 0)
                     }
-                    className="w-12 h-8 text-xs text-center font-black text-neutral-900 bg-[#F7F3EE] border border-[#E2DBD0] rounded-lg focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#D6001C]"
+                    className="w-14 h-8 text-base sm:text-xs text-center font-black text-neutral-900 bg-[#F7F3EE] border border-[#E2DBD0] rounded-lg focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#D6001C]"
                   />
                   <span className="text-[10px] font-bold text-neutral-400">hs</span>
                 </div>

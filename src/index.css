@@ -12,11 +12,26 @@
   }
 }
 
+html {
+  -webkit-text-size-adjust: 100%;
+  touch-action: manipulation;
+}
+
 body {
   font-family: 'Archivo', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   background-color: #F7F3EE; /* Suave tono crema para trabajo en exteriores bajo el sol */
   color: #171515;
   -webkit-tap-highlight-color: transparent;
+  overflow-x: hidden;
+}
+
+/* Evita el auto-zoom automático en iPhone (Safari) y Android al escribir en cualquier campo */
+@media screen and (max-width: 768px) {
+  input:not([readonly]),
+  textarea:not([readonly]),
+  select {
+    font-size: 16px !important;
+  }
 }
 
 /* Custom scrollbar hiding */

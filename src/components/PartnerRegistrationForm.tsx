@@ -157,7 +157,7 @@ export const PartnerRegistrationForm: React.FC = () => {
               placeholder="Ej: 32"
               value={age}
               onChange={(e) => setAge(e.target.value)}
-              className="w-full h-10 sm:h-11 px-3 text-sm sm:text-base font-black text-neutral-900 bg-[#F7F3EE] border border-neutral-300 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#D6001C] transition-all"
+              className="w-full h-11 px-3 text-base font-black text-neutral-900 bg-[#F7F3EE] border border-neutral-300 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#D6001C] transition-all"
               required
             />
           </div>
@@ -173,7 +173,7 @@ export const PartnerRegistrationForm: React.FC = () => {
               placeholder="Ej: 15000"
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
-              className="w-full h-10 sm:h-11 px-3 text-sm sm:text-base font-black text-neutral-900 bg-[#F7F3EE] border border-neutral-300 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#D6001C] transition-all"
+              className="w-full h-11 px-3 text-base font-black text-neutral-900 bg-[#F7F3EE] border border-neutral-300 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#D6001C] transition-all"
               required
             />
           </div>
