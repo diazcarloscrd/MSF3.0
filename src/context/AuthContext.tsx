@@ -1,23 +1,23 @@
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
-import { Profile, TeamMember } from '../types/database';
-
-export const OFFICIAL_TEAM_MEMBERS: TeamMember[] = [
-  { id: '98a3255a-239c-4b08-b266-902dd12c2f66', display_name: 'Carlos Diaz', username: 'carlos', profile_id: '98a3255a-239c-4b08-b266-902dd12c2f66', role: 'ADMIN', is_active: true, created_at: '', updated_at: '' },
-  { id: 'f04029fd-30d8-4212-a67a-f7a8bb9f3765', display_name: 'Ariel', username: 'ariel', profile_id: 'f04029fd-30d8-4212-a67a-f7a8bb9f3765', role: 'COLLECTOR', is_active: true, created_at: '', updated_at: '' },
-  { id: '573553c9-4b0d-4cf7-bb83-efaec8536fef', display_name: 'Lucia', username: 'lucia', profile_id: '573553c9-4b0d-4cf7-bb83-efaec8536fef', role: 'COLLECTOR', is_active: true, created_at: '', updated_at: '' },
-  { id: '48082c38-28fe-4e0a-bb1a-6149aa8ff9f5', display_name: 'Emilce', username: 'emilce', profile_id: '48082c38-28fe-4e0a-bb1a-6149aa8ff9f5', role: 'COLLECTOR', is_active: true, created_at: '', updated_at: '' },
-  { id: '06af96dd-039e-49e0-972b-251300682fe9', display_name: 'Selena', username: 'selena', profile_id: '06af96dd-039e-49e0-972b-251300682fe9', role: 'COLLECTOR', is_active: true, created_at: '', updated_at: '' },
-  { id: '68bff83d-b7a3-4a5e-a3ec-25fac405e2a3', display_name: 'Brenda', username: 'brenda', profile_id: '68bff83d-b7a3-4a5e-a3ec-25fac405e2a3', role: 'COLLECTOR', is_active: true, created_at: '', updated_at: '' },
-  { id: 'beff4824-7d07-441a-8fa4-85b8ca26bda8', display_name: 'Rosario', username: 'rosario', profile_id: 'beff4824-7d07-441a-8fa4-85b8ca26bda8', role: 'COLLECTOR', is_active: true, created_at: '', updated_at: '' },
-  { id: '6857cf6e-2dd3-4bca-9e20-35e55671928c', display_name: 'Nicolas', username: 'nicolas', profile_id: '6857cf6e-2dd3-4bca-9e20-35e55671928c', role: 'COLLECTOR', is_active: true, created_at: '', updated_at: '' },
-];
+import { DbProfileRow, Profile, TeamMember } from '../types/database';
+import {
+  getLastUsername,
+  mapDbProfileToProfile,
+  mapDbProfileToTeamMember,
+  normalizeUsername,
+  setLastUsername,
+  sortTeamMembers,
+  usernameToEmail,
+} from '../lib/authUtils';
 
 interface AuthContextType {
   user: any | null;
   profile: Profile | null;
   currentMember: TeamMember | null;
   teamMembers: TeamMember[];
+  allProfiles: TeamMember[];
+  lastUsername: string;
   isAdmin: boolean;
   isAuthenticated: boolean;
   loading: boolean;
@@ -26,64 +26,86 @@ interface AuthContextType {
   closeLoginModal: () => void;
   signInWithCredentials: (username: string, pass: string) => Promise<{ error: any }>;
   signOut: () => Promise<void>;
+  login: (username: string, pass: string) => Promise<{ error: any }>;
+  logout: () => Promise<void>;
   simulateSelectMember: (memberId: string) => void;
+  refreshTeamMembers: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType>({} as AuthContextType);
 
-export function normalizeUsername(raw: string): string {
-  const clean = raw
-    .trim()
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '');
-
-  if (clean.includes('@')) return clean;
-  if (clean === 'carlos diaz') return 'carlos';
-  return clean.replace(/\s+/g, '');
-}
-
-export function usernameToEmail(username: string): string {
-  const clean = normalizeUsername(username);
-  if (clean.includes('@')) return clean;
-  return `${clean}@msfc-user.invalid`;
-}
-
-function mapDbProfileToTeamMember(row: any): TeamMember {
-  const isAdm = row.role === 'admin';
-  return {
-    id: row.user_id,
-    user_id: row.user_id,
-    profile_id: row.user_id,
-    display_name: row.full_name,
-    username: row.username,
-    role: isAdm ? 'ADMIN' : 'COLLECTOR',
-    is_active: Boolean(row.is_active),
-    created_at: row.created_at || '',
-    updated_at: row.created_at || '',
-  };
-}
-
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<any | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
-  const [teamMembers, setTeamMembers] = useState<TeamMember[]>(OFFICIAL_TEAM_MEMBERS);
+  const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
+  const [allProfiles, setAllProfiles] = useState<TeamMember[]>([]);
   const [currentMember, setCurrentMember] = useState<TeamMember | null>(null);
+  const [lastUsername, setLastUsernameState] = useState<string>(() => getLastUsername());
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
   const [isAdmin, setIsAdmin] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(true);
   const [showLoginModal, setShowLoginModal] = useState<boolean>(false);
 
   const clearLocalSessionState = useCallback(() => {
-    localStorage.removeItem('msf_active_member_id');
-    localStorage.removeItem('msf_is_authenticated');
-    localStorage.removeItem('msf_is_admin_session');
+    try {
+      localStorage.removeItem('msf_active_member_id');
+      localStorage.removeItem('msf_is_authenticated');
+      localStorage.removeItem('msf_is_admin_session');
+    } catch {
+      // Ignore storage errors
+    }
     setUser(null);
     setProfile(null);
     setCurrentMember(null);
+    setTeamMembers([]);
+    setAllProfiles([]);
     setIsAuthenticated(false);
     setIsAdmin(false);
   }, []);
+
+  const fetchAndApplyProfiles = useCallback(
+    async (
+      ownFallback?: DbProfileRow
+    ): Promise<{ activeOnly: TeamMember[]; allMapped: TeamMember[] } | null> => {
+      const { data: rows, error } = await supabase
+        .from('profiles')
+        .select('user_id, username, full_name, role, is_active, created_at');
+
+      if (error || !rows) {
+        if (ownFallback) {
+          const mappedOwn = mapDbProfileToTeamMember(ownFallback);
+          setAllProfiles([mappedOwn]);
+          const activeFallback = mappedOwn.is_active ? [mappedOwn] : [];
+          setTeamMembers(activeFallback);
+          return { activeOnly: activeFallback, allMapped: [mappedOwn] };
+        }
+        return null;
+      }
+
+      if (rows.length === 0) {
+        if (ownFallback) {
+          const mappedOwn = mapDbProfileToTeamMember(ownFallback);
+          setAllProfiles([mappedOwn]);
+          const activeFallback = mappedOwn.is_active ? [mappedOwn] : [];
+          setTeamMembers(activeFallback);
+          return { activeOnly: activeFallback, allMapped: [mappedOwn] };
+        }
+        setAllProfiles([]);
+        setTeamMembers([]);
+        return { activeOnly: [], allMapped: [] };
+      }
+
+      const mappedAll = sortTeamMembers(
+        (rows as DbProfileRow[]).map(mapDbProfileToTeamMember),
+        { adminsFirst: true }
+      );
+      const activeOnly = mappedAll.filter((m) => m.is_active);
+      setAllProfiles(mappedAll);
+      setTeamMembers(activeOnly);
+      return { activeOnly, allMapped: mappedAll };
+    },
+    []
+  );
 
   const hydrateFromSession = useCallback(
     async (session: any): Promise<{ ok: boolean; error?: string }> => {
@@ -101,7 +123,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           .from('profiles')
           .select('user_id, username, full_name, role, is_active, created_at')
           .eq('user_id', session.user.id)
-          .maybeSingle();
+          .maybeSingle<DbProfileRow>();
 
         if (ownErr) {
           clearLocalSessionState();
@@ -111,63 +133,54 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (!ownRow || !ownRow.is_active) {
           await supabase.auth.signOut().catch(() => {});
           clearLocalSessionState();
-          return { ok: false, error: 'Esta cuenta no se encuentra habilitada. Consultá al administrador.' };
+          return {
+            ok: false,
+            error: 'Esta cuenta no se encuentra habilitada. Consultá al administrador.',
+          };
         }
 
-        // Cargar lista actualizada de integrantes activos desde PostgreSQL
-        const { data: activeRows } = await supabase
-          .from('profiles')
-          .select('user_id, username, full_name, role, is_active, created_at')
-          .eq('is_active', true);
+        setLastUsername(ownRow.username);
+        setLastUsernameState(normalizeUsername(ownRow.username));
 
-        let resolvedTeam = OFFICIAL_TEAM_MEMBERS;
-        if (activeRows && activeRows.length > 0) {
-          resolvedTeam = activeRows
-            .filter((r: any) => r.username !== 'morena' && r.is_active)
-            .map(mapDbProfileToTeamMember)
-            .sort((a, b) => {
-              if (a.role === 'ADMIN' && b.role !== 'ADMIN') return -1;
-              if (b.role === 'ADMIN' && a.role !== 'ADMIN') return 1;
-              return a.display_name.localeCompare(b.display_name, 'es');
-            });
-          setTeamMembers(resolvedTeam);
-        }
+        const profileResult = await fetchAndApplyProfiles(ownRow);
+        const resolvedTeam =
+          profileResult && profileResult.activeOnly.length > 0
+            ? profileResult.activeOnly
+            : [mapDbProfileToTeamMember(ownRow)];
 
         const isUserAdmin = ownRow.role === 'admin';
         const ownMember =
-          resolvedTeam.find((m) => m.id === ownRow.user_id) || mapDbProfileToTeamMember(ownRow);
+          resolvedTeam.find((m) => m.id === ownRow.user_id) ||
+          mapDbProfileToTeamMember(ownRow);
 
         let activeMember = ownMember;
         if (isUserAdmin) {
-          const savedImpersonatedId = localStorage.getItem('msf_active_member_id');
-          const foundImpersonated = savedImpersonatedId
-            ? resolvedTeam.find((m) => m.id === savedImpersonatedId)
-            : null;
-          if (foundImpersonated) {
-            activeMember = foundImpersonated;
+          try {
+            const savedImpersonatedId = localStorage.getItem('msf_active_member_id');
+            const foundImpersonated = savedImpersonatedId
+              ? resolvedTeam.find((m) => m.id === savedImpersonatedId)
+              : null;
+            if (foundImpersonated) {
+              activeMember = foundImpersonated;
+            }
+          } catch {
+            // Ignore storage errors
           }
         }
 
         setUser(session.user);
-        setProfile({
-          id: ownRow.user_id,
-          user_id: ownRow.user_id,
-          username: ownRow.username,
-          auth_user_id: ownRow.user_id,
-          email: session.user.email || null,
-          full_name: ownRow.full_name,
-          role: isUserAdmin ? 'ADMIN' : 'COLLECTOR',
-          is_active: true,
-          created_at: ownRow.created_at || '',
-          updated_at: ownRow.created_at || '',
-        });
+        setProfile(mapDbProfileToProfile(ownRow, session.user.email || null));
         setIsAdmin(isUserAdmin);
         setCurrentMember(activeMember);
         setIsAuthenticated(true);
 
-        localStorage.setItem('msf_active_member_id', activeMember.id);
-        localStorage.setItem('msf_is_authenticated', 'true');
-        localStorage.setItem('msf_is_admin_session', isUserAdmin ? 'true' : 'false');
+        try {
+          localStorage.setItem('msf_active_member_id', activeMember.id);
+          localStorage.setItem('msf_is_authenticated', 'true');
+          localStorage.setItem('msf_is_admin_session', isUserAdmin ? 'true' : 'false');
+        } catch {
+          // Ignore storage errors
+        }
 
         return { ok: true };
       } catch (err: any) {
@@ -175,8 +188,36 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return { ok: false, error: err?.message || 'Error al validar sesión' };
       }
     },
-    [clearLocalSessionState]
+    [clearLocalSessionState, fetchAndApplyProfiles]
   );
+
+  const refreshTeamMembers = useCallback(async () => {
+    const result = await fetchAndApplyProfiles();
+    if (!result) return;
+
+    const { activeOnly, allMapped } = result;
+    const signedInUserId = user?.id ?? profile?.id ?? null;
+
+    if (signedInUserId) {
+      const ownRow = allMapped.find((m) => m.id === signedInUserId);
+      if (!ownRow || !ownRow.is_active) {
+        await supabase.auth.signOut().catch(() => {});
+        clearLocalSessionState();
+        return;
+      }
+    }
+
+    setCurrentMember((prev) => {
+      if (!prev) return prev;
+      const updated = activeOnly.find((m) => m.id === prev.id);
+      if (updated) return updated;
+      if (profile) {
+        const ownActive = activeOnly.find((m) => m.id === profile.id);
+        if (ownActive) return ownActive;
+      }
+      return prev;
+    });
+  }, [fetchAndApplyProfiles, clearLocalSessionState, user?.id, profile]);
 
   useEffect(() => {
     let mounted = true;
@@ -199,15 +240,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
       });
 
-    const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (!mounted) return;
-      if (event === 'SIGNED_OUT' || !session?.user) {
-        clearLocalSessionState();
-      } else if (event === 'TOKEN_REFRESHED' && session.access_token) {
-        supabase.realtime.setAuth(session.access_token);
-        setUser(session.user);
+    const { data: authListener } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        if (!mounted) return;
+        if (event === 'SIGNED_OUT' || !session?.user) {
+          clearLocalSessionState();
+        } else if (event === 'TOKEN_REFRESHED' && session.access_token) {
+          supabase.realtime.setAuth(session.access_token);
+          setUser(session.user);
+        }
       }
-    });
+    );
 
     return () => {
       mounted = false;
@@ -215,42 +258,58 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
   }, [hydrateFromSession, clearLocalSessionState]);
 
-  const signInWithCredentials = async (username: string, pass: string) => {
-    const email = usernameToEmail(username);
-
-    try {
-      const res = await supabase.auth.signInWithPassword({ email, password: pass });
-      if (res.error || !res.data?.session) {
-        return { error: 'Usuario o contraseña incorrectos.' };
+  const signInWithCredentials = useCallback(
+    async (username: string, pass: string) => {
+      const normalized = normalizeUsername(username);
+      const email = usernameToEmail(normalized);
+      if (!email) {
+        return { error: 'Ingresá tu nombre de usuario.' };
       }
 
-      const hydrated = await hydrateFromSession(res.data.session);
-      if (!hydrated.ok) {
-        return { error: hydrated.error || 'No se pudo iniciar sesión.' };
+      try {
+        const res = await supabase.auth.signInWithPassword({ email, password: pass });
+        if (res.error || !res.data?.session) {
+          return { error: 'Usuario o contraseña incorrectos.' };
+        }
+
+        const hydrated = await hydrateFromSession(res.data.session);
+        if (!hydrated.ok) {
+          return { error: hydrated.error || 'No se pudo iniciar sesión.' };
+        }
+
+        setShowLoginModal(false);
+        return { error: null };
+      } catch (err: any) {
+        return { error: err?.message || 'Error de conexión con el servidor.' };
       }
+    },
+    [hydrateFromSession]
+  );
 
-      setShowLoginModal(false);
-      return { error: null };
-    } catch (err: any) {
-      return { error: err?.message || 'Error de conexión con el servidor.' };
-    }
-  };
-
-  const signOut = async () => {
+  const signOut = useCallback(async () => {
     clearLocalSessionState();
     try {
       await supabase.auth.signOut();
-    } catch {}
-  };
-
-  const simulateSelectMember = (memberId: string) => {
-    if (!isAdmin) return;
-    const mem = teamMembers.find((m) => m.id === memberId);
-    if (mem) {
-      setCurrentMember(mem);
-      localStorage.setItem('msf_active_member_id', mem.id);
+    } catch {
+      // Ignore network errors on signOut
     }
-  };
+  }, [clearLocalSessionState]);
+
+  const simulateSelectMember = useCallback(
+    (memberId: string) => {
+      if (!isAdmin) return;
+      const mem = teamMembers.find((m) => m.id === memberId);
+      if (mem) {
+        setCurrentMember(mem);
+        try {
+          localStorage.setItem('msf_active_member_id', mem.id);
+        } catch {
+          // Ignore storage errors
+        }
+      }
+    },
+    [isAdmin, teamMembers]
+  );
 
   return (
     <AuthContext.Provider
@@ -259,6 +318,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         profile,
         currentMember,
         teamMembers,
+        allProfiles,
+        lastUsername,
         isAdmin,
         isAuthenticated,
         loading,
@@ -267,7 +328,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         closeLoginModal: () => setShowLoginModal(false),
         signInWithCredentials,
         signOut,
+        login: signInWithCredentials,
+        logout: signOut,
         simulateSelectMember,
+        refreshTeamMembers,
       }}
     >
       {children}

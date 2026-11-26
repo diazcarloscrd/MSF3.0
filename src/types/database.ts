@@ -1,12 +1,22 @@
 export type UserRole = 'ADMIN' | 'COLLECTOR';
 export type WorkDayStatus = 'OPEN' | 'CLOSED';
 export type PaymentMethodType = 'credit_card' | 'debit_card' | 'bank_cbu' | 'prepaid_wallet';
+export type DbPaymentMethodId = 'credito' | 'debito' | 'cbu' | 'prepaga';
 
 export interface PaymentMethodRule {
   payment_type: PaymentMethodType;
   label: string;
   points: number;
   is_active: boolean;
+}
+
+export interface DbProfileRow {
+  user_id: string;
+  username: string;
+  full_name: string;
+  role: 'admin' | 'captador';
+  is_active: boolean;
+  created_at: string;
 }
 
 export interface Profile {
@@ -17,6 +27,7 @@ export interface Profile {
   email: string | null;
   full_name: string;
   role: UserRole;
+  db_role?: 'admin' | 'captador';
   is_active: boolean;
   created_at: string;
   updated_at: string;
@@ -33,6 +44,15 @@ export interface TeamMember {
   is_active: boolean;
   created_at: string;
   updated_at: string;
+}
+
+export interface DailySettings {
+  operational_date: string; // YYYY-MM-DD
+  hours_worked: number | null;
+  captor_count: number | null;
+  notes?: string | null;
+  updated_at: string;
+  updated_by: string | null;
 }
 
 export interface WorkDay {
@@ -80,23 +100,42 @@ export interface Partner {
   contribution_frequency: string;
   captured_at: string;
   additional_fields?: Record<string, any>;
+  client_request_id?: string | null;
+  updated_by?: string | null;
   created_at: string;
   updated_at: string;
   team_member?: TeamMember;
 }
 
+export type Socio = Partner;
+
+export interface DailyAttendance {
+  operational_date: string; // YYYY-MM-DD
+  user_id: string;
+  is_present: boolean;
+  updated_at: string;
+  updated_by: string | null;
+}
+
+export type DailyAttendanceRecord = DailyAttendance;
+
 export interface DailyClosure {
-  id: string;
+  id?: string;
   work_day_id?: string;
-  work_date: string;
+  operational_date: string; // YYYY-MM-DD (PK in DB)
+  work_date: string; // Alias for operational_date for UI compatibility
   summary_data: ClosureSummaryData;
   whatsapp_message: string;
+  present_user_ids: string[];
+  notes: string | null;
+  status: WorkDayStatus;
   closed_by: string | null;
   closed_at: string;
-  created_at: string;
+  created_at?: string;
 }
 
 export interface MemberPerformance {
+  member_id?: string;
   name: string;
   hours: number;
   partners_count: number;
@@ -156,6 +195,175 @@ export interface WeeklyMemberReport {
   average_amount: number | null; // Promedio = Dinero total / Socios finales
   notes?: string;
   updated_at: string;
+}
+
+export type AuditAction = 'INSERT' | 'UPDATE' | 'MOVE_DATE' | 'DELETE' | 'USER_ADMIN';
+
+export interface AuditLogEntry {
+  id: string;
+  created_at: string;
+  actor_id: string | null;
+  actor_name: string;
+  entity_type: string;
+  entity_id: string;
+  action: AuditAction | string;
+  old_data: Record<string, unknown> | null;
+  new_data: Record<string, unknown> | null;
+  summary: string;
+}
+
+export interface RangeStatsSummary {
+  total_socios: number;
+  total_points: number;
+  total_amount: number;
+  total_hours: number;
+  average_age: number | null;
+  credito_count: number;
+  credito_points: number;
+  debito_count: number;
+  debito_points: number;
+  cbu_count: number;
+  cbu_points: number;
+  prepaga_count: number;
+  prepaga_points: number;
+  socios_per_hour: number | null;
+  points_per_hour: number | null;
+  average_amount: number | null;
+  amount_per_hour?: number | null;
+}
+
+export interface RangeStatsByMember {
+  user_id: string;
+  full_name: string;
+  socios_count: number;
+  points: number;
+  amount: number;
+  hours: number;
+  average_age: number | null;
+  credito_count: number;
+  debito_count: number;
+  cbu_count: number;
+  prepaga_count: number;
+  socios_per_hour: number | null;
+  points_per_hour: number | null;
+  average_amount: number | null;
+  amount_per_hour?: number | null;
+}
+
+export interface RangeStatsByDate {
+  operational_date: string;
+  socios_count: number;
+  points: number;
+  amount: number;
+  hours: number;
+}
+
+export interface RangeStatsHourRow {
+  operational_date: string;
+  user_id: string;
+  hours_worked: number;
+  updated_at: string;
+}
+
+export interface RangeStatsSocioRow {
+  id: string;
+  operational_date: string;
+  age: number;
+  amount: number;
+  payment_method_id: DbPaymentMethodId | string;
+  payment_method_name: string;
+  points: number;
+  created_at: string;
+  created_by: string | null;
+  created_by_name: string;
+  updated_at: string;
+  updated_by: string | null;
+}
+
+export interface StatsRangeResponse {
+  start_date: string;
+  end_date: string;
+  user_id: string | null;
+  summary: RangeStatsSummary;
+  by_member: RangeStatsByMember[];
+  by_date: RangeStatsByDate[];
+  hours: RangeStatsHourRow[];
+  socios: RangeStatsSocioRow[];
+}
+
+export type RangeStatsResult = StatsRangeResponse;
+
+export type AdminTeamManagerRequest =
+  | {
+      action: 'create_member';
+      full_name: string;
+      username: string;
+      password: string;
+      role?: 'admin' | 'captador' | UserRole;
+      email?: string;
+      is_active?: boolean;
+    }
+  | {
+      action: 'update_member';
+      user_id: string;
+      full_name?: string;
+      role?: 'admin' | 'captador' | UserRole;
+      is_active?: boolean;
+    }
+  | {
+      action: 'reset_password';
+      user_id: string;
+      password: string;
+      new_password?: string;
+    };
+
+export type AdminTeamManagerResponse =
+  | { ok: true; action: 'create_member'; member: DbProfileRow }
+  | { ok: true; action: 'update_member'; member: DbProfileRow }
+  | { ok: true; action: 'reset_password'; user_id: string }
+  | { ok?: false; error: string };
+
+export type HybridWeeklyStatus = 'live' | 'confirmed' | 'outdated';
+
+export interface HybridWeeklyRow {
+  member_id: string;
+  member_name: string;
+  status: HybridWeeklyStatus;
+  points_earned: number;
+  invalid_and_cancellations: number;
+  final_points: number;
+  hours: number;
+  points_per_hour: number | null;
+  total_amount: number;
+  final_partners: number;
+  average_amount: number | null;
+  live_points_earned: number;
+  live_hours: number;
+  live_total_amount: number;
+  live_partners: number;
+  saved_report?: WeeklyMemberReport;
+}
+
+export interface HybridWeeklySummary {
+  year: number;
+  week_number: number;
+  rows: HybridWeeklyRow[];
+  totals: {
+    points_earned: number;
+    invalid_and_cancellations: number;
+    final_points: number;
+    hours: number;
+    points_per_hour: number | null;
+    total_amount: number;
+    final_partners: number;
+    average_amount: number | null;
+  };
+}
+
+export interface MovePartnersResult {
+  movedCount: number;
+  ownersMissingHours: { userId: string; name: string }[];
+  error: string | null;
 }
 
 export const PAYMENT_METHOD_CONFIG: Record<PaymentMethodType, { label: string; points: number; badgeColor: string; description: string }> = {
