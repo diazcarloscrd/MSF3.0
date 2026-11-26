@@ -1,116 +1,59 @@
-# MSF Argentina – Control de Jornada & Captación F2F 3.0
+# MSF Argentina – Control de Jornada & Captación F2F 3.0 (v3.1)
 
-**Producción (Vercel):** https://msf3.vercel.app/  
-**Instructivo Integrado:** https://msf3.vercel.app/instructivo.html  
-**Base de Datos & Realtime:** Supabase PostgreSQL 17 (`msfc` · `brvwhnyjemxqsnuwqwwt`, región `sa-east-1`)  
+**Producción (referencia):** https://msf3.vercel.app/ (`brvwhnyjemxqsnuwqwwt`, rama `main`)  
+**Staging (entorno activo de actualización):** https://msf3-git-staging-diaz-carlos-crd.vercel.app (`msf3-staging` · `tfggfeaszonentggtnfy`, rama `staging`)  
+**Instructivo Integrado:** `/instructivo.html`  
 **Zona Horaria Operativa Oficial:** `America/Argentina/Buenos_Aires` (UTC-3)
 
 ---
 
-## 1. Resumen Ejecutivo de la Auditoría Integral (Pre-Semana 46)
+## 1. Descripción General y Novedades v3.1
 
-Se ejecutó una auditoría exhaustiva de punta a punta sobre **arquitectura frontend, diseño responsive multi-dispositivo, base de datos PostgreSQL, políticas RLS, triggers del servidor, sincronización Realtime y ciclo de medianoche (`00:00 hs`)**, realizando la comparativa directa contra el código y las migraciones de la aplicación anterior (`diazcarloscrd/MSFC`).
+Sistema colaborativo en tiempo real para el registro de socios, control horario, estadísticas, cierre diario por WhatsApp, planilla semanal y administración de equipo F2F de Médicos Sin Fronteras Argentina.
 
-El sistema se encuentra **100% verificado, limpio de datos de prueba y listo para iniciar la Semana 46 (Lunes 09/11/2026 al Domingo 15/11/2026)**.
-
----
-
-## 2. Comparativa con `MSFC` y Funcionamiento del Reinicio a las `00:00 hs`
-
-Al inspeccionar el repositorio original `MSFC` y la base de datos compartida `brvwhnyjemxqsnuwqwwt`, se verificó y replicó con exactitud su arquitectura de separación por fecha operativa (`operational_date`):
-
-1. **Fecha Operativa Autorizada por el Servidor (`public.get_operational_date()`):**
-   - La fecha activa se determina directamente en PostgreSQL mediante `(statement_timestamp() AT TIME ZONE 'America/Argentina/Buenos_Aires')::date` (evitando errores si el reloj de un teléfono está desconfigurado).
-2. **Persistencia Histórica Permanente (Sin Pérdida de Datos):**
-   - Cada socio (`public.socios`), cada registro de horas individuales (`public.captor_daily_hours`) y la cantidad de captadores presentes (`public.daily_settings`) se almacenan asociados a su `operational_date` (`YYYY-MM-DD`).
-   - La función `private.purge_expired_data()` se mantiene desactivada (`return 0`), garantizando que **ninguna jornada anterior se borre jamás**. Todas las jornadas previas (`94` socios históricos entre el `28/10/2026` y el `06/11/2026`) permanecen intactas y consultables desde **Socios & Calendario**.
-3. **Limpieza y Apertura Automática de Nueva Jornada después de las `00:00 hs`:**
-   - `WorkDayContext` monitorea el cambio de fecha operativa cada **20 segundos** y también de forma instantánea cuando el celular vuelve de segundo plano (`visibilitychange`, `focus`, `online`).
-   - Al cruzar las `00:00:00 hs` de Argentina:
-     - Los datos del día que acaba de terminar quedan resguardados automáticamente en PostgreSQL bajo la fecha anterior.
-     - El panel principal (**Carga & Horas**, **Estadísticas** y **Cierre WhatsApp**) avanza automáticamente al nuevo día en curso con **0 socios cargados y 0 horas trabajadas** para todos los integrantes.
-     - Además, al tocar la pestaña **Carga & Horas**, el sistema siempre regresa automáticamente a la fecha activa del día en curso para evitar que alguien intente cargar socios sobre una fecha histórica consultada previamente en el calendario.
+### Capacidades clave incorporadas (Módulos A–G)
+- **Layout móvil responsive & accesibilidad táctil (Módulo A):** Diseño sin desborde horizontal (`360px` / `390×844` / `1280×800`), navegación adaptable de 5 pestañas para captadores y 7 para administradores, skeletons de hidratación inicial, reset de scroll al cambiar de pestaña y controles de acción `>= 44×44 px` con separación `>= 8 px`.
+- **Carga en fecha anterior y alerta de horas en 0 (Módulo B):** Selector `Hoy (DD/MM)` / `Ayer (DD/MM)` / `Otra fecha...` (`<= hoy` en hora Buenos Aires) con banner ámbar preventivo y carga rápida de horas si la fecha elegida figura en `0 h`.
+- **Movimiento de fecha individual y en lote (Módulo B):** Botón `"Mover fecha"` por socio y `"Selección múltiple"` en `Carga & Horas` y `Socios & Calendario`, con `MoveDateModal`, validación de fecha pasada/hoy y aviso si el dueño tiene `0 h` en el destino.
+- **Protección en campo / Cola offline (Módulo G):** Persistencia automática de borrador en `localStorage`, cola local de envíos fallidos por red con UUID v4 idempotente (`client_request_id`), banner de pendientes con botón `"Reintentar ahora"` y reenvío automático al evento `online`.
+- **Cierre WhatsApp con asistencia y guardado oficial (Módulo C):** Selector `"¿Quiénes trabajaron hoy?"` persistido en `daily_attendance` (bloquea desmarcar a quien tenga socios u horas), botón de sincronización, observaciones de jornada, guardado oficial en `daily_closures`, detección de cierre desactualizado y filtro de `RENDIMIENTO INDIVIDUAL` sin bloques `N/D` de ausentes.
+- **Filtros por equipo completo, Estadísticas por rango y CSV (Módulo D):** `Socios & Calendario` lista siempre a todos los integrantes activos con conteo del día (incluyendo `(0)`) y exportación CSV UTF-8 BOM compatible con Excel. `Estadísticas` permite filtrar por `Día actual`, `Semana`, `Mes`, `Rango personalizado` y captador individual usando la RPC `get_stats_by_range()`.
+- **Planilla Semanal híbrida y selector de año (Módulo E):** Soporte multi-año (`2026`, `2027`...) y 53 semanas ISO, tabla `EQUIPO COMPLETO` con estado `En vivo` / `Confirmada` / `Desactualizada — recalcular`, fila de totales, texto WhatsApp y CSV.
+- **Login limpio y vistas exclusivas de Administrador (Módulo F):** Login sin botones de nombres hardcoded (autocompleta `msf_last_username`), pestaña **Equipo** conectada a la Edge Function `admin-team-manager` y pestaña **Auditoría** con los últimos 100 eventos de `audit_log`.
 
 ---
 
-## 3. Hallazgos Críticos Detectados y Corregidos en la Auditoría
+## 2. Arquitectura de Datos, Seguridad y Edge Functions
 
-Durante la auditoría técnica profunda se detectaron y resolvieron **6 puntos críticos** que habrían afectado la operación real en la Semana 46:
+- **Tablas en PostgreSQL (`public`):** `profiles`, `socios`, `captor_daily_hours`, `daily_settings`, `weekly_reports`, `daily_attendance`, `daily_closures` y `audit_log`.
+- **RPCs públicas:** `get_operational_date()`, `get_available_operational_dates()` y `get_stats_by_range(p_start, p_end, p_user_id)` (evita el límite de 1000 filas de PostgREST).
+- **Edge Function:** `supabase/functions/admin-team-manager` para crear cuentas, editar rol/estado (con bloqueo Auth `ban_duration`) y restablecer contraseñas, validando JWT y `role = 'admin'` en servidor.
+- **Documentación detallada:** Ver [DATABASE.md](./DATABASE.md) y [SECURITY.md](./SECURITY.md).
 
-| # | Hallazgo Detectado | Solución Aplicada y Verificada |
-|---|---|---|
-| **1** | **UUIDs inválidos en `AuthContext` para Emilce y Rosario** (`'emilce-uuid'` y `'rosario-uuid'`): provocaban rechazo de tipo `uuid` en PostgreSQL al insertar socios. | Se vincularon los UUIDs reales de `auth.users` / `public.profiles` para los 8 integrantes activos y se hidratan dinámicamente desde `public.profiles`. |
-| **2** | **Sesión local simulada y ocultamiento de errores de red/RLS:** si expiraba el token de Supabase, la app permitía entrar localmente y mostraba éxito sin guardar en la BD. | Se eliminó todo bypass local y toda contraseña del bundle cliente. Ahora el acceso exige un JWT válido de Supabase Auth + cuenta `is_active = true`, y toda escritura verifica confirmación real de PostgreSQL antes de mostrar éxito. |
-| **3** | **Horas individuales guardadas solo en `localStorage`:** las horas cargadas en un celular no se veían en otros teléfonos ni en la computadora del administrador. | Se conectaron `WorkDayContext` y `WeeklyClosingSection` directamente a la tabla real `public.captor_daily_hours` de PostgreSQL con suscripción **Supabase Realtime**. |
-| **4** | **Planilla Semanal guardada solo en `localStorage` y límite en Semana 52:** los cierres semanales no se compartían entre dispositivos y faltaba la Semana 53 de 2026. | Se creó `public.weekly_reports` en PostgreSQL con trigger de cálculo exacto (`final_points`, `points_per_hour`, `average_amount`), RLS, Realtime y soporte completo para las **53 semanas ISO de 2026** (iniciando en Semana 46). |
-| **5** | **Selector de Captador del Administrador (`Carlos Diaz`) sobrescrito por trigger:** al elegir un captador en el Header para cargarle un socio, el trigger forzaba la autoría a Carlos. | Se actualizó `private.prepare_socio_record()` y la política `socios_insert_own`: los captadores siguen estrictamente bloqueados a su propio `auth.uid()` y fecha del día, mientras que el Administrador puede registrar/editar en nombre de cualquier captador activo manteniendo trazabilidad en `updated_by`. |
-| **6** | **Cuenta `morena` figuraba con `is_active = true` en `public.profiles` y faltaba índice FK en `captor_daily_hours`:** | Se estableció `is_active = false` para `morena` en PostgreSQL (bloqueando login y el 100% de RLS sin alterar el historial antiguo) y se creó `captor_daily_hours_user_id_idx`. |
+> **Excepción documentada de Auth (`tier_free`):** La opción **Leaked Password Protection** de Supabase Auth queda exceptuada / pospuesta porque el proyecto opera en Plan Free (`tier_free`). Ver detalle y mitigaciones en [SECURITY.md](./SECURITY.md).
 
 ---
 
-## 4. Arquitectura de Base de Datos y Seguridad RLS (`brvwhnyjemxqsnuwqwwt`)
-
-### Tablas Productivas en `public` (todas con RLS activo y Realtime habilitado)
-
-1. **`public.profiles`**
-   - Directorio oficial vinculado 1:1 con `auth.users(id)`.
-   - **8 cuentas activas (`is_active = true`):**
-     - **Administrador:** `Carlos Diaz` (`carlos`)
-     - **7 Captadores:** `Ariel` (`ariel`), `Lucia` (`lucia`), `Emilce` (`emilce`), `Selena` (`selena`), `Brenda` (`brenda`), `Rosario` (`rosario`), `Nicolas` (`nicolas`).
-   - **Cuenta deshabilitada (`is_active = false`):** `Morena` (`morena`) — bloqueada en Auth y en todas las políticas RLS.
-
-2. **`public.socios`**
-   - Almacena edad (`1..99`, validado `16..99` en UI), aporte mensual (`> 0`), medio de pago (`credito`, `debito`, `cbu`, `prepaga`), puntaje recalculado en servidor por el trigger `private.prepare_socio_record()` (`1.00`, `0.70`, `0.60`, `0.40`), `operational_date` y autoría (`created_by`, `created_by_name`, `updated_by`).
-   - **Permisos RLS:** Todos los integrantes activos ven el tablero compartido; cada captador solo puede insertar, editar o eliminar sus propios registros; el Administrador puede auditar, crear, corregir o eliminar cualquier registro.
-
-3. **`public.captor_daily_hours`**
-   - Clave primaria `(operational_date, user_id)`, rango `0..24` horas (admite decimales como `3.5` y `0` para francos rotativos).
-   - **Permisos RLS:** Lectura para el equipo activo; escritura únicamente sobre las propias horas (`user_id = auth.uid()`) o por el Administrador.
-
-4. **`public.daily_settings`**
-   - Clave primaria `(operational_date)`. Guarda `captor_count` (cantidad de captadores presentes en el equipo para esa jornada; valor inicial inteligente: `7` de Lunes a Viernes, `2` los Sábados rotativos).
-
-5. **`public.weekly_reports`**
-   - Clave primaria `(year, week_number, user_id)`. Consolida la **Planilla Semanal Individual** desde la **Semana 46 (`2026-11-09` al `2026-11-15`)**.
-   - El trigger `private.prepare_weekly_report()` recalcula automáticamente en servidor:
-     - `final_points = points_earned - invalid_and_cancellations`
-     - `points_per_hour = final_points / hours` (o `NULL` si `hours = 0`)
-     - `average_amount = total_amount / final_partners` (o `NULL` si `final_partners = 0`)
-
-> **Nota opcional de panel Supabase:** En Supabase Dashboard -> *Authentication -> Providers / Attack Protection*, puede activarse la opción **Leaked Password Protection** ([documentación oficial](https://supabase.com/docs/guides/auth/password-security#password-strength-and-leaked-password-protection)) como refuerzo adicional sobre contraseñas de Auth.
-
----
-
-## 5. Resultados de Pruebas Multiusuario E2E y Limpieza Pre-Producción
-
-Se ejecutaron dos suites completas de verificación antes de dejar el entorno listo para la Semana 46:
-
-1. **Prueba E2E Real contra Supabase (`@supabase/supabase-js` + PostgreSQL):**
-   - **Bloqueo anónimo (`anon`):** Rechazo del 100% en las 5 tablas sin sesión autenticada.
-   - **Bloqueo de cuenta inactiva (`morena`):** Rechazo inmediato por `is_active = false` y bloqueo RLS total en lectura y escritura.
-   - **Ciclo completo real con los 7 captadores (`ariel`, `lucia`, `emilce`, `selena`, `brenda`, `rosario`, `nicolas`):**
-     - Inicio de sesión real con JWT, consulta de `get_operational_date()`, carga de horas individuales (`4h`, `3.5h`, `2h`, `0h`), alta de socios en los 4 medios de pago (`1.0`, `0.7`, `0.6`, `0.4` pts), edición de socio propio, prueba de anti-spoofing de fecha/autor y guardado de Planilla Semanal 46.
-   - **Aislamiento RLS cruzado:** Verificado que ningún captador puede modificar ni borrar socios, horas ni planillas semanales de otro compañero.
-   - **Rol Administrador (`Carlos Diaz`) y Cambio de Medianoche (`00:00 hs`):** Verificada la carga delegada mediante el selector de captador, edición/baja administrativa y el aislamiento exacto entre `2026-11-09` (jornada cerrada con datos preservados) y `2026-11-10` (nueva jornada limpia en `0`).
-2. **Limpieza Total Verificada en Producción:**
-   - `socios` desde `2026-11-07` en adelante: **`0` registros** (historial previo `2026-10-28` al `2026-11-06` intacto con **`94` socios**).
-   - `captor_daily_hours` desde `2026-11-07` en adelante: **`0` registros** (historial del `2026-11-06` intacto con **`8` registros**).
-   - `weekly_reports`: **`0` registros** (lista en blanco para estrenar el **Lunes 09/11/2026 – Semana 46**).
-
----
-
-## 6. Comandos de Desarrollo y Verificación Local
+## 3. Comandos de Desarrollo, Lint y Pruebas
 
 ```bash
-# Instalar dependencias
+# Instalar dependencias de la app
 npm install
 
-# Ejecutar suite de tests unitarios (Vitest)
+# Desarrollo local
+npm run dev
+
+# Linter estático (oxlint)
+npm run lint
+
+# Tests unitarios (Vitest)
 npx vitest run
 
-# Compilar verificación estricta TypeScript + bundle de producción
+# Verificación TypeScript y build de producción
 npm run build
 
-# Levantar entorno local de desarrollo
-npm run dev
+# Verificación de tipos y tests E2E Playwright (carpeta e2e/)
+npm --prefix e2e run typecheck
+npm --prefix e2e run test:smoke
+npx --prefix e2e playwright test -c e2e/playwright.config.ts tiers/
 ```
